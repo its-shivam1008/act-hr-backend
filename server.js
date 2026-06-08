@@ -1,25 +1,25 @@
+require("dotenv").config();
+
 const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const compression = require("compression");
-const morgan = require("morgan");
+const cors    = require("cors");
+
+const connectDB = require("./config/db");
+
+connectDB();
 
 const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 app.use(cors());
-app.use(helmet());
-app.use(compression());
-app.use(morgan("dev"));
+app.use(express.json());
+
+app.use("/api/auth", require("./routes/authRoutes"));
 
 app.get("/", (req, res) => {
-  res.send("Health Ok!");
+  res.send("Server Running");
 });
 
-app.listen(5000, () => {
-  console.log("Server is running on port 5000");
-})
+const PORT = process.env.PORT || 5000;
 
-// modules.exports = app;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
