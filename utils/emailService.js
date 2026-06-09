@@ -95,4 +95,61 @@ const sendInvitationEmail = async ({ toEmail, inviteUrl, inviterName, organisati
   });
 };
 
-module.exports = { sendPasswordResetEmail, sendInvitationEmail };
+// ── OTP email ──────────────────────────────────────────────────────────────
+const sendOtpEmail = async (toEmail, otp, purpose, userName = 'there') => {
+  const transporter = createTransporter();
+  const isRegister  = purpose === 'register';
+
+  const subject = isRegister
+    ? 'Verify your ACT HR account – OTP'
+    : 'Your password reset OTP – ACT HR Portal';
+
+  const heading = isRegister
+    ? 'Email Verification Code'
+    : 'Password Reset Code';
+
+  const bodyText = isRegister
+    ? `Thanks for signing up! Use the code below to verify your email address and activate your account.`
+    : `We received a request to reset your password. Use the code below to proceed.`;
+
+  await transporter.sendMail({
+    from: `"ACT HR System" <${process.env.SMTP_USER}>`,
+    to: toEmail,
+    subject,
+    html: `
+      <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+      <style>
+        body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;margin:0;padding:0}
+        .wrap{max-width:520px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+        .hd{background:linear-gradient(135deg,#4f46e5,#1e1b4b);padding:32px;text-align:center}
+        .hd .logo{display:inline-block;width:48px;height:48px;background:rgba(255,255,255,.15);border-radius:12px;line-height:48px;font-size:24px;font-weight:700;color:#fff;margin-bottom:12px}
+        .hd h1{color:#fff;margin:0;font-size:20px}
+        .bd{padding:36px 40px;text-align:center}
+        .bd p{color:#475569;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:left}
+        .otp-box{background:#f8fafc;border:2px dashed #e2e8f0;border-radius:16px;padding:28px 20px;margin:0 auto 24px;display:inline-block;width:100%;box-sizing:border-box}
+        .otp-digits{font-size:48px;font-weight:800;letter-spacing:18px;color:#1e293b;font-family:monospace}
+        .note{background:#f8fafc;border-left:4px solid #f59e0b;border-radius:4px;padding:12px 16px;text-align:left}
+        .note p{color:#92400e;font-size:13px;margin:0}
+        .ft{background:#f8fafc;text-align:center;padding:20px;color:#94a3b8;font-size:12px}
+      </style></head>
+      <body><div class="wrap">
+        <div class="hd"><div class="logo">A</div><h1>ACT Business Solution – HR Portal</h1></div>
+        <div class="bd">
+          <p>Hello <strong>${userName}</strong>,</p>
+          <p>${bodyText}</p>
+          <div class="otp-box">
+            <div class="otp-digits">${otp}</div>
+          </div>
+          <div class="note">
+            <p>⏱ This code expires in <strong>10 minutes</strong>. Do not share it with anyone.
+            ${isRegister ? '' : ' If you did not request a password reset, you can ignore this email.'}</p>
+          </div>
+        </div>
+        <div class="ft">&copy; ${new Date().getFullYear()} ACT Business Solution &nbsp;|&nbsp; Automated message, do not reply.</div>
+      </div></body></html>
+    `,
+  });
+};
+
+module.exports = { sendPasswordResetEmail, sendInvitationEmail, sendOtpEmail };
+
