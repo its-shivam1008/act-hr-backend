@@ -16,6 +16,17 @@ app.use(morgan("dev"));
 
 app.use("/api/auth", require("./routes/authRoutes"));
 
+// ── Master Data ────────────────────────────────────────────────────────────
+app.use("/api/masterdata/agencies",          require("./routes/masterdata/agencies/agencyRoutes"));
+app.use("/api/masterdata/employment-types", require("./routes/masterdata/employmentTypes/employmentTypeRoutes"));
+app.use("/api/masterdata/designations",     require("./routes/masterdata/designations/designationRoutes"));
+app.use("/api/masterdata/skill-levels",     require("./routes/masterdata/skillLevels/skillLevelRoutes"));
+app.use("/api/masterdata/departments",      require("./routes/masterdata/departments/departmentRoutes"));
+app.use("/api/masterdata/locations",        require("./routes/masterdata/locations/locationRoutes"));
+
+// ── Employee Master ────────────────────────────────────────────────────────
+app.use("/api/employees", require("./routes/employees/employeeRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
