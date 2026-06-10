@@ -55,6 +55,21 @@ const acceptInviteSchema = z.object({
   password: z.string().min(6).max(72).optional(),
 });
 
+// ── Verify OTP (register + forgot-password) ────────────────────────
+const verifyOtpSchema = z.object({
+  email: z.string({ required_error: "Email is required" })
+    .trim().toLowerCase().email("Please provide a valid email address"),
+  otp: z.string({ required_error: "OTP is required" })
+    .length(6, "OTP must be exactly 6 digits").regex(/^\d{6}$/, "OTP must be numeric"),
+});
+
+// ── Resend OTP ───────────────────────────────────────────────────────
+const resendOtpSchema = z.object({
+  email: z.string({ required_error: "Email is required" })
+    .trim().toLowerCase().email(),
+  purpose: z.enum(["register", "forgot-password"]),
+});
+
 // ── Middleware factory ─────────────────────────────────────────────────────
 const validate = (schema) => {
   return function validateMiddleware(req, res, next) {
@@ -74,10 +89,8 @@ const validate = (schema) => {
 
 module.exports = {
   validate,
-  registerSchema,
-  loginSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-  inviteUserSchema,
-  acceptInviteSchema,
+  registerSchema, loginSchema,
+  forgotPasswordSchema, resetPasswordSchema,
+  inviteUserSchema, acceptInviteSchema,
+  verifyOtpSchema, resendOtpSchema,
 };

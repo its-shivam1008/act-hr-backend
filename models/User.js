@@ -56,6 +56,13 @@ const UserSchema = new mongoose.Schema(
     pendingOrgName: { type: String, select: false },
     pendingRole:    { type: String, select: false },
 
+    // ── Email verification ─────────────────────────────────────────────────
+    // default:true = backward compat for existing users; register() sets to false
+    isVerified: { type: Boolean, default: true },
+    emailOtp:        { type: String, select: false },
+    emailOtpExpire:  { type: Date,   select: false },
+    otpPurpose:      { type: String, enum: ['register', 'forgot-password'], select: false },
+
     // ── Misc ───────────────────────────────────────────────────────────────
     isActive:           { type: Boolean, default: true },
     lastLogin:          Date,
@@ -83,6 +90,15 @@ UserSchema.methods.generateInviteToken = function () {
   this.inviteToken       = crypto.createHash("sha256").update(raw).digest("hex");
   this.inviteTokenExpire = Date.now() + 72 * 60 * 60 * 1000;
   return raw;
+};
+
+// ── Generate 6-digit OTP (10-minute expiry) ───────────────────────────────
+UserSchema.methods.generateOtp = function (purpose) {
+  const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+  this.emailOtp       = crypto.createHash("sha256").update(otp).digest("hex");
+  this.emailOtpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.otpPurpose     = purpose;
+  return otp; // plain OTP → emailed to user
 };
 
 // ── Safe payload ──────────────────────────────────────────────────────────
