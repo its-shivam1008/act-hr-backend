@@ -1,4 +1,5 @@
-const User    = require("../models/User");
+const User     = require("../models/User");
+const Employee = require("../models/Employee");
 const jwt     = require("jsonwebtoken");
 const crypto  = require("crypto");
 const { sendPasswordResetEmail, sendInvitationEmail, sendOtpEmail } = require("../utils/emailService");
@@ -101,6 +102,40 @@ const login = async (req, res) => {
 
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
+      // ── Fallback: check if this is an employee trying to log in ──────────
+      const emp = await Employee.findOne({ workEmail: email }).select("+password");
+      if (emp) {
+        if (emp.status === "Terminated")
+          return res.status(403).json({ success: false, message: "Account deactivated. Contact HR." });
+        if (!emp.password) {
+          emp.password = emp.employeeId;
+          await emp.save({ validateBeforeSave: false });
+        }
+        const empMatch = await emp.matchPassword(password);
+        if (!empMatch)
+          return res.status(401).json({ success: false, message: "Invalid email or password" });
+        const empToken = jwt.sign(
+          { id: emp._id, type: "employee", organisationId: emp.organisationId },
+          process.env.JWT_SECRET,
+          { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
+        );
+        return res.json({
+          success: true,
+          type:    "employee",
+          token:   empToken,
+          employee: {
+            _id:         emp._id,
+            employeeId:  emp.employeeId,
+            firstName:   emp.firstName,
+            lastName:    emp.lastName,
+            workEmail:   emp.workEmail,
+            department:  emp.department,
+            designation: emp.designation,
+            status:      emp.status,
+            organisationId: emp.organisationId,
+          },
+        });
+      }
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
     if (user.inviteStatus === "pending") {

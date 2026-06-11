@@ -27,6 +27,9 @@ app.use("/api/masterdata/locations",        require("./routes/masterdata/locatio
 // ── Employee Master ────────────────────────────────────────────────────────
 app.use("/api/employees", require("./routes/employees/employeeRoutes"));
 
+// ── Employee Self-Service Portal ───────────────────────────────────────────
+app.use("/api/employee-portal", require("./routes/employeePortal/employeePortalRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });

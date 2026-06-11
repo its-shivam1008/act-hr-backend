@@ -1,4 +1,5 @@
-const mongoose = require("mongoose");
+const mongoose  = require("mongoose");
+const bcrypt    = require("bcryptjs");
 
 const EmployeeSchema = new mongoose.Schema(
   {
@@ -140,18 +141,34 @@ const EmployeeSchema = new mongoose.Schema(
     panDocUrl: String,
     offerLetterUrl: String,
 
+    // Portal access
+    password:          { type: String, select: false },
+    passwordChangedAt: { type: Date },
+
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );
 
-// Auto-generate EMP-0001 style ID
+// ── Instance method: compare entered password ─────────────────────────────
+EmployeeSchema.methods.matchPassword = async function (entered) {
+  return bcrypt.compare(entered, this.password);
+};
+
+// ── Auto-generate employeeId + initial password ────────────────────────────
 EmployeeSchema.pre("save", async function () {
-  if (this.isNew && !this.employeeId) {
-    const count = await this.constructor.countDocuments({
-      organisationId: this.organisationId,
-    });
-    this.employeeId = `EMP-${String(count + 1).padStart(4, "0")}`;
+  if (this.isNew) {
+    if (!this.employeeId) {
+      const count = await this.constructor.countDocuments({ organisationId: this.organisationId });
+      this.employeeId = `EMP-${String(count + 1).padStart(4, "0")}`;
+    }
+    // Initial portal password = employeeId (employee can change later)
+    if (!this.password) {
+      this.password = await bcrypt.hash(this.employeeId, 10);
+    }
+  } else if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 10);
+    this.passwordChangedAt = new Date();
   }
 });
 
