@@ -1,7 +1,9 @@
-const User     = require("../models/User");
-const Employee = require("../models/Employee");
+const User                = require("../models/User");
+const Employee            = require("../models/Employee");
+const PendingRegistration = require("../models/PendingRegistration");
 const jwt     = require("jsonwebtoken");
 const crypto  = require("crypto");
+const bcrypt  = require("bcryptjs");
 const { sendPasswordResetEmail, sendInvitationEmail, sendOtpEmail } = require("../utils/emailService");
 
 const generateToken = (id) =>
@@ -14,42 +16,67 @@ const hashToken = (raw) =>
 
 // ── Register ───────────────────────────────────────────────────────────────
 // POST /api/auth/register
-// Creates user with isVerified:false → sends OTP → frontend goes to /verify-otp
+// NEW FLOW: Does NOT create a User yet.
+// Creates a PendingRegistration (TTL 10 min) → sends OTP → User only created on verify.
 const register = async (req, res) => {
   try {
     const { name, email, password, organisationName } = req.body;
+    if (!name || !email || !password || !organisationName) {
+      return res.status(422).json({ success: false, message: "All fields are required" });
+    }
 
-    const exists = await User.findOne({ email });
-    if (exists) {
+    // 1. Block if a fully-verified User already exists with this email
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingUser) {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
 
+    // 2. Hash password now (so we store it safely in the pending doc)
+    const hashedPassword = await bcrypt.hash(password, 10);
     const organisationId = crypto.randomUUID();
 
-    const user = await User.create({
-      name, email, password,
-      role:             "super_admin",
-      organisationId,
-      organisationName,
-      inviteStatus:     "active",
-      isVerified:       false,   // ← must verify email before login
-    });
-
-    // Generate OTP and send verification email
-    const otp = user.generateOtp("register");
-    await user.save({ validateBeforeSave: false });
-
-    try {
-      await sendOtpEmail(email, otp, "register", name);
-    } catch (emailErr) {
-      console.error("[Register] OTP email failed:", emailErr.message);
-      // Don't fail registration — user can resend OTP
+    // 3. Upsert PendingRegistration (replace if they registered before without verifying)
+    let pending = await PendingRegistration.findOne({ email: email.toLowerCase().trim() });
+    if (pending) {
+      // Refresh their pending entry with a new OTP
+      pending.name             = name;
+      pending.password         = hashedPassword;
+      pending.organisationId   = organisationId;
+      pending.organisationName = organisationName;
+      pending.createdAt        = new Date();   // reset TTL clock
+    } else {
+      pending = new PendingRegistration({
+        name, email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        organisationId,
+        organisationName,
+        otp:       "placeholder",   // overwritten by generateOtp below
+        otpExpire: new Date(),
+      });
     }
 
-    return res.status(201).json({
+    // 4. Generate OTP and save pending record
+    const otp = pending.generateOtp();
+    await pending.save();
+
+    // 5. Send OTP email
+    try {
+      await sendOtpEmail(email, otp, "register", name);
+      console.log(`[Register] OTP sent to ${email}`);
+    } catch (emailErr) {
+      console.error("[Register] OTP email FAILED:", emailErr.message);
+      // Clean up so user can retry cleanly
+      await PendingRegistration.deleteOne({ email: email.toLowerCase().trim() });
+      return res.status(500).json({
+        success: false,
+        message: "We couldn't send the verification email. Please check your email address and try again.",
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: "Account created! A 6-digit code has been sent to your email.",
-      email,  // frontend uses this to pre-fill the verify-otp page
+      message: "A 6-digit verification code has been sent to your email. Please verify to complete registration.",
+      email,
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -62,33 +89,54 @@ const register = async (req, res) => {
 
 // ── Verify Registration OTP ────────────────────────────────────────────────
 // POST /api/auth/verify-otp
+// Only called for purpose=register. Verifying creates the real User in DB.
 const verifyRegisterOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const hashed = hashToken(otp);
-
-    const user = await User.findOne({
-      email,
-      emailOtp:       hashed,
-      emailOtpExpire: { $gt: Date.now() },
-      otpPurpose:     "register",
-    }).select("+emailOtp +emailOtpExpire +otpPurpose");
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+    if (!email || !otp) {
+      return res.status(422).json({ success: false, message: "Email and OTP are required" });
     }
 
-    user.isVerified      = true;
-    user.emailOtp        = undefined;
-    user.emailOtpExpire  = undefined;
-    user.otpPurpose      = undefined;
-    await user.save({ validateBeforeSave: false });
+    const hashed = crypto.createHash("sha256").update(String(otp)).digest("hex");
 
-    return res.status(200).json({
+    // Find pending registration with matching email + OTP + not expired
+    const pending = await PendingRegistration.findOne({
+      email:     email.toLowerCase().trim(),
+      otp:       hashed,
+      otpExpire: { $gt: new Date() },
+    });
+
+    if (!pending) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP. Please try again or request a new code." });
+    }
+
+    // OTP is valid — NOW create the real User in the database
+    const user = await User.create({
+      name:             pending.name,
+      email:            pending.email,
+      password:         pending.password,   // already hashed
+      role:             "super_admin",
+      organisationId:   pending.organisationId,
+      organisationName: pending.organisationName,
+      inviteStatus:     "active",
+      isVerified:       true,               // ← verified right away
+    });
+
+    // Clean up the pending record
+    await PendingRegistration.deleteOne({ _id: pending._id });
+
+    console.log(`[VerifyOtp] User created after OTP verification: ${user.email}`);
+
+    return res.status(201).json({
       success: true,
-      message: "Email verified! You can now log in.",
+      message: "Email verified! Your account is ready. You can now log in.",
     });
   } catch (error) {
+    if (error.code === 11000) {
+      // Edge case: user somehow already exists (double submit)
+      await PendingRegistration.deleteOne({ email: req.body.email });
+      return res.status(409).json({ success: false, message: "Account already exists. Please log in." });
+    }
     console.error("[VerifyOtp]", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -182,24 +230,46 @@ const login = async (req, res) => {
 const resendOtp = async (req, res) => {
   try {
     const { email, purpose } = req.body;
-
-    const user = await User.findOne({ email })
-      .select("+emailOtp +emailOtpExpire +otpPurpose");
-
-    // Always return 200 to prevent email enumeration
-    if (!user) {
-      return res.status(200).json({ success: true, message: "If that email exists, an OTP has been resent." });
-    }
-    if (purpose === "register" && user.isVerified) {
-      return res.status(400).json({ success: false, message: "This email is already verified." });
+    if (!email || !purpose) {
+      return res.status(422).json({ success: false, message: "Email and purpose are required" });
     }
 
-    const otp = user.generateOtp(purpose);
-    await user.save({ validateBeforeSave: false });
+    if (purpose === "register") {
+      // ── Resend for pending (unverified) registration ──────────────────────
+      const pending = await PendingRegistration.findOne({ email: email.toLowerCase().trim() });
 
-    await sendOtpEmail(user.email, otp, purpose, user.name);
+      // Anti-enumeration: always return 200 if not found
+      if (!pending) {
+        return res.status(200).json({ success: true, message: "If a pending registration exists, a new OTP has been sent." });
+      }
 
-    return res.status(200).json({ success: true, message: "OTP resent to your email." });
+      // Check if already fully registered
+      const verified = await User.findOne({ email: email.toLowerCase().trim() });
+      if (verified) {
+        return res.status(400).json({ success: false, message: "This email is already verified. Please log in." });
+      }
+
+      pending.createdAt = new Date();   // reset TTL so it doesn't expire while user waits
+      const otp = pending.generateOtp();
+      await pending.save();
+
+      await sendOtpEmail(email, otp, "register", pending.name);
+      return res.status(200).json({ success: true, message: "A new verification code has been sent to your email." });
+
+    } else {
+      // ── Resend for forgot-password (User must already exist) ────────────────
+      const user = await User.findOne({ email })
+        .select("+emailOtp +emailOtpExpire +otpPurpose");
+
+      if (!user) {
+        return res.status(200).json({ success: true, message: "If that email exists, an OTP has been resent." });
+      }
+
+      const otp = user.generateOtp(purpose);
+      await user.save({ validateBeforeSave: false });
+      await sendOtpEmail(user.email, otp, purpose, user.name);
+      return res.status(200).json({ success: true, message: "OTP resent to your email." });
+    }
   } catch (error) {
     console.error("[ResendOtp]", error.message);
     return res.status(500).json({ success: false, message: error.message });

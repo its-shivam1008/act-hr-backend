@@ -57,9 +57,10 @@ const UserSchema = new mongoose.Schema(
     pendingRole:    { type: String, select: false },
 
     // ── Email verification ─────────────────────────────────────────────────
-    // default:true = backward compat for existing users; register() sets to false
+    // Always true for new registrations — User is only created AFTER OTP is verified.
+    // For existing users (invited), default is true; forgot-password uses emailOtp fields.
     isVerified: { type: Boolean, default: true },
-    emailOtp:        { type: String, select: false },
+    emailOtp:        { type: String, select: false },   // used for forgot-password OTP only
     emailOtpExpire:  { type: Date,   select: false },
     otpPurpose:      { type: String, enum: ['register', 'forgot-password'], select: false },
 
@@ -73,8 +74,11 @@ const UserSchema = new mongoose.Schema(
 );
 
 // ── Hash password on change ────────────────────────────────────────────────
+// Skip if password is already hashed (e.g. passed from PendingRegistration after verification)
 UserSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) return;
+  // bcrypt hashes always start with $2a$ or $2b$ — skip re-hashing
+  if (this.password.startsWith("$2")) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
