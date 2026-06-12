@@ -1,5 +1,6 @@
-const jwt  = require("jsonwebtoken");
-const User = require("../models/User");
+const jwt      = require("jsonwebtoken");
+const User     = require("../models/User");
+const Employee = require("../models/Employee");
 
 // Protect: verifies Bearer JWT and attaches req.user
 exports.protect = async (req, res, next) => {
@@ -45,4 +46,24 @@ exports.authorize = (...roles) => {
     }
     next();
   };
+};
+
+// Protect employee portal routes
+exports.employeeProtect = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer "))
+    return res.status(401).json({ success: false, message: "Not authorized" });
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type !== "employee")
+      return res.status(403).json({ success: false, message: "Employee token required" });
+    const emp = await Employee.findById(decoded.id);
+    if (!emp) return res.status(401).json({ success: false, message: "Employee not found" });
+    req.employee = emp;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
 };
