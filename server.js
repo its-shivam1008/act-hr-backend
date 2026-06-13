@@ -51,6 +51,9 @@ app.use(
   require("./routes/employeePortal/employeePortalRoutes"),
 );
 
+// ── Asset Management ───────────────────────────────────────────────────────
+app.use("/api/assets", require("./routes/assets/assetRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
