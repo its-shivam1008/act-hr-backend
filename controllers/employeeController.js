@@ -85,13 +85,30 @@ const createEmployee = async (req, res) => {
 // ── PUT /api/employees/:id ─────────────────────────────────────────────────
 const updateEmployee = async (req, res) => {
   try {
-    const emp = await Employee.findOneAndUpdate(
-      { _id: req.params.id, organisationId: req.user.organisationId },
-      { ...req.body },
-      { new: true, runValidators: true }
-    );
-    if (!emp) return res.status(404).json({ success: false, message: "Employee not found" });
-    return res.json({ success: true, employee: emp });
+    const { employeeId: newEmployeeId, ...otherFields } = req.body;
+
+    // Find existing employee first to detect employeeId change
+    const existing = await Employee.findOne({
+      _id: req.params.id,
+      organisationId: req.user.organisationId,
+    }).select("+password");
+    if (!existing) return res.status(404).json({ success: false, message: "Employee not found" });
+
+    // If employeeId is being changed, reset password to the new employeeId
+    const updateData = { ...otherFields };
+    if (newEmployeeId !== undefined) {
+      updateData.employeeId = newEmployeeId;
+      if (newEmployeeId && newEmployeeId !== existing.employeeId) {
+        // Mark password as modified so pre-save hook hashes the new plain value
+        updateData.password = newEmployeeId;
+        updateData.passwordChangedAt = new Date();
+      }
+    }
+
+    Object.assign(existing, updateData);
+    await existing.save();
+
+    return res.json({ success: true, employee: existing });
   } catch (err) {
     console.error("[UpdateEmployee]", err.message);
     return res.status(500).json({ success: false, message: err.message });
