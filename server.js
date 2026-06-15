@@ -45,6 +45,9 @@ app.use(
 // ── Employee Master ────────────────────────────────────────────────────────
 app.use("/api/employees", require("./routes/employees/employeeRoutes"));
 
+// ── Labour Master ──────────────────────────────────────────────────────────
+app.use("/api/labours", require("./routes/labours/labourRoutes"));
+
 // ── Employee Self-Service Portal ───────────────────────────────────────────
 app.use(
   "/api/employee-portal",
