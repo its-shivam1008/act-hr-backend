@@ -151,14 +151,17 @@ const login = async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
       // ── Fallback: check if this is an employee trying to log in ──────────
-      const emp = await Employee.findOne({ workEmail: email }).select("+password");
+      const emp = await Employee.findOne({ workEmail: email.toLowerCase().trim() }).select("+password");
       if (emp) {
         if (emp.status === "Terminated")
           return res.status(403).json({ success: false, message: "Account deactivated. Contact HR." });
+
+        // If no password stored yet, set it to bcrypt-hash of employeeId (default password)
         if (!emp.password) {
-          emp.password = emp.employeeId;
+          emp.password = await bcrypt.hash(emp.employeeId, 10);
           await emp.save({ validateBeforeSave: false });
         }
+
         const empMatch = await emp.matchPassword(password);
         if (!empMatch)
           return res.status(401).json({ success: false, message: "Invalid email or password" });

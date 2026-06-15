@@ -1,4 +1,5 @@
 const jwt      = require("jsonwebtoken");
+const bcrypt   = require("bcryptjs");
 const Employee = require("../models/Employee");
 
 // ── POST /api/employee-portal/login ──────────────────────────────────────────
@@ -10,20 +11,20 @@ const employeeLogin = async (req, res) => {
 
     const emp = await Employee.findOne({ workEmail: email.toLowerCase().trim() }).select("+password");
     if (!emp)
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
 
     if (emp.status === "Terminated")
       return res.status(403).json({ success: false, message: "Your account has been deactivated. Contact HR." });
 
-    // If no password set yet (old record), set it now from employeeId
+    // If no password set yet (old record), initialise from employeeId as bcrypt hash
     if (!emp.password) {
-      emp.password = emp.employeeId; // will be hashed by pre-save
+      emp.password = await bcrypt.hash(emp.employeeId, 10);
       await emp.save({ validateBeforeSave: false });
     }
 
     const match = await emp.matchPassword(password);
     if (!match)
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
 
     const token = jwt.sign(
       { id: emp._id, type: "employee", organisationId: emp.organisationId },
@@ -33,6 +34,7 @@ const employeeLogin = async (req, res) => {
 
     return res.json({
       success: true,
+      type:    "employee",
       token,
       employee: {
         _id:         emp._id,
