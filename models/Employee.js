@@ -1,5 +1,7 @@
 const mongoose  = require("mongoose");
 const bcrypt    = require("bcryptjs");
+const { Schema } = mongoose;
+const OID = Schema.Types.ObjectId;
 
 const EmployeeSchema = new mongoose.Schema(
   {
@@ -25,17 +27,24 @@ const EmployeeSchema = new mongoose.Schema(
     nationality: String,
     maritalStatus: String,
 
-    // Employment
-    department: String,
-    designation: String,
-    employmentType: {
-      type: String,
-      enum: ["Full-Time", "Part-Time", "Contract", "Intern", "Remote"],
-    },
-    dateOfJoining: Date,
+    // Employment — stored as ObjectId refs to master data
+    department:            { type: OID, ref: "Department", default: null },
+    departmentName:        String,   // denormalised
+    designation:           { type: OID, ref: "Designation", default: null },
+    designationName:       String,
+    employmentType:        { type: OID, ref: "EmploymentType", default: null },
+    employmentTypeName:    String,
+    workLocation:          { type: OID, ref: "Location", default: null },
+    workLocationName:      String,
+    complianceZone:        { type: OID, ref: "ComplianceZone", default: null },
+    complianceZoneName:    String,
+    complianceSkillLevel:  { type: OID, ref: "SkillLevel", default: null },  // zone-gated skill
+    complianceSkillLevelName: String,
+    skillLevel:            { type: OID, ref: "SkillLevel", default: null },   // general skill
+    skillLevelName:        String,
+    dateOfJoining:    Date,
     confirmationDate: Date,
-    dateOfLeaving: Date,
-    workLocation: String,
+    dateOfLeaving:    Date,
     reportingManager: String,
     status: {
       type: String,

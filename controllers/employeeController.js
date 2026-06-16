@@ -1,5 +1,43 @@
-const Employee = require("../models/Employee");
+const Employee        = require("../models/Employee");
 const { EmployeeFormConfig } = require("../models/EmployeeFormConfig");
+const Department      = require("../models/departmentModels/Department");
+const Designation     = require("../models/designationModels/Designation");
+const EmploymentType  = require("../models/employmentTypeModels/EmploymentType");
+const Location        = require("../models/locationModels/Location");
+const SkillLevel      = require("../models/skillLevelModels/SkillLevel");
+const ComplianceZone  = require("../models/wageCategories/ComplianceZone");
+const mongoose        = require("mongoose");
+
+// ── Resolve denormalised name fields from master data ─────────────────────────
+const resolveNames = async (body) => {
+  const extra = {};
+  const tryName = async (Model, id, key) => {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return;
+    const doc = await Model.findById(id).select("name agencyName").lean();
+    if (doc) extra[key] = doc.name || doc.agencyName || "";
+  };
+  await Promise.all([
+    tryName(Department,     body.department,          "departmentName"),
+    tryName(Designation,    body.designation,          "designationName"),
+    tryName(EmploymentType, body.employmentType,       "employmentTypeName"),
+    tryName(Location,       body.workLocation,         "workLocationName"),
+    tryName(ComplianceZone, body.complianceZone,       "complianceZoneName"),
+    tryName(SkillLevel,     body.complianceSkillLevel, "complianceSkillLevelName"),
+    tryName(SkillLevel,     body.skillLevel,           "skillLevelName"),
+  ]);
+  return extra;
+};
+
+// ── populate helper for reads ─────────────────────────────────────────────────
+const POPULATE = [
+  { path: "department",          select: "name" },
+  { path: "designation",         select: "name" },
+  { path: "employmentType",      select: "name" },
+  { path: "workLocation",        select: "name" },
+  { path: "complianceZone",      select: "name" },
+  { path: "complianceSkillLevel",select: "name levelNumber" },
+  { path: "skillLevel",          select: "name levelNumber" },
+];
 
 // ── GET /api/employees ─────────────────────────────────────────────────────
 const getEmployees = async (req, res) => {
@@ -9,14 +47,14 @@ const getEmployees = async (req, res) => {
 
     const query = { organisationId: orgId };
 
-    if (department && department !== "All") query.department = department;
+    if (department && department !== "All") query.department = department; // ObjectId or name
     if (status && status !== "All")         query.status     = status;
     if (search) {
       const s = new RegExp(search, "i");
       query.$or = [
         { firstName: s }, { lastName: s },
         { workEmail: s }, { employeeId: s },
-        { department: s }, { designation: s },
+        { departmentName: s }, { designationName: s },
       ];
     }
 
@@ -25,7 +63,7 @@ const getEmployees = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * Number(limit))
       .limit(Number(limit))
-      .populate("reportingManager", "firstName lastName employeeId");
+      .populate(POPULATE);
 
     return res.json({ success: true, total, page: Number(page), employees });
   } catch (err) {
@@ -37,8 +75,9 @@ const getEmployees = async (req, res) => {
 // ── GET /api/employees/:id ─────────────────────────────────────────────────
 const getEmployee = async (req, res) => {
   try {
-    const emp = await Employee.findOne({ _id: req.params.id, organisationId: req.user.organisationId })
-      .populate("reportingManager", "firstName lastName employeeId");
+    const emp = await Employee
+      .findOne({ _id: req.params.id, organisationId: req.user.organisationId })
+      .populate(POPULATE);
     if (!emp) return res.status(404).json({ success: false, message: "Employee not found" });
     return res.json({ success: true, employee: emp });
   } catch (err) {
@@ -66,8 +105,10 @@ const createEmployee = async (req, res) => {
       }
     }
 
+    const nameFields = await resolveNames(req.body);
     const employee = await Employee.create({
       ...req.body,
+      ...nameFields,
       organisationId: orgId,
       createdBy: req.user._id,
     });
@@ -87,19 +128,17 @@ const updateEmployee = async (req, res) => {
   try {
     const { employeeId: newEmployeeId, ...otherFields } = req.body;
 
-    // Find existing employee first to detect employeeId change
     const existing = await Employee.findOne({
       _id: req.params.id,
       organisationId: req.user.organisationId,
     }).select("+password");
     if (!existing) return res.status(404).json({ success: false, message: "Employee not found" });
 
-    // If employeeId is being changed, reset password to the new employeeId
-    const updateData = { ...otherFields };
+    const nameFields = await resolveNames(otherFields);
+    const updateData = { ...otherFields, ...nameFields };
     if (newEmployeeId !== undefined) {
       updateData.employeeId = newEmployeeId;
       if (newEmployeeId && newEmployeeId !== existing.employeeId) {
-        // Mark password as modified so pre-save hook hashes the new plain value
         updateData.password = newEmployeeId;
         updateData.passwordChangedAt = new Date();
       }
@@ -133,10 +172,54 @@ const getFormConfig = async (req, res) => {
     const orgId = req.user.organisationId;
     let config = await EmployeeFormConfig.findOne({ organisationId: orgId });
 
-    // Auto-seed default config for this org if none exists yet
     if (!config) {
       const defaultData = EmployeeFormConfig.buildDefault(orgId);
       config = await EmployeeFormConfig.create(defaultData);
+    } else {
+      // Reconcile and update fields: merge code-defined FIELD_DEFINITIONS with DB config
+      const { FIELD_DEFINITIONS } = require("../models/EmployeeFormConfig");
+      const dbFieldsMap = new Map(config.fields.map(f => [f.fieldKey, f]));
+      let hasChanges = false;
+
+      const reconciledFields = FIELD_DEFINITIONS.map((def, idx) => {
+        const dbField = dbFieldsMap.get(def.fieldKey);
+        if (dbField) {
+          const isChanged = (
+            dbField.inputType !== def.inputType ||
+            dbField.label !== def.label ||
+            dbField.section !== def.section
+          );
+          if (isChanged) {
+            hasChanges = true;
+          }
+          return {
+            fieldKey:  def.fieldKey,
+            label:     def.label,
+            section:   def.section,
+            inputType: def.inputType,
+            visible:   dbField.visible,
+            required:  dbField.required,
+            order:     dbField.order !== undefined ? dbField.order : idx,
+          };
+        } else {
+          // New field added in code definition
+          hasChanges = true;
+          return {
+            fieldKey:  def.fieldKey,
+            label:     def.label,
+            section:   def.section,
+            inputType: def.inputType,
+            visible:   def.defaultVisible,
+            required:  def.defaultRequired,
+            order:     idx,
+          };
+        }
+      });
+
+      if (hasChanges) {
+        config.fields = reconciledFields;
+        await config.save();
+      }
     }
 
     return res.json({ success: true, config });

@@ -48,6 +48,9 @@ app.use("/api/employees", require("./routes/employees/employeeRoutes"));
 // ── Labour Master ──────────────────────────────────────────────────────────
 app.use("/api/labours", require("./routes/labours/labourRoutes"));
 
+// ── Wage Categories (Minimum Wage Master) ─────────────────────────────────
+app.use("/api/wage-categories", require("./routes/wageCategories/wageCategoryRoutes"));
+
 // ── Employee Self-Service Portal ───────────────────────────────────────────
 app.use(
   "/api/employee-portal",

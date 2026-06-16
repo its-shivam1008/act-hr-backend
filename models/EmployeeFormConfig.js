@@ -15,17 +15,21 @@ const FIELD_DEFINITIONS = [
   { fieldKey: "altPhone",      label: "Alternate Phone",  section: "Personal Information",  inputType: "text",   defaultVisible: false, defaultRequired: false },
 
   // Employment Details
-  { fieldKey: "employeeId",       label: "Employee ID",        section: "Employment Details", inputType: "text",   defaultVisible: true,  defaultRequired: false },
-  { fieldKey: "department",       label: "Department",          section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: true  },
-  { fieldKey: "designation",      label: "Designation",         section: "Employment Details", inputType: "text",   defaultVisible: true,  defaultRequired: true  },
-  { fieldKey: "employmentType",   label: "Employment Type",     section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: true  },
-  { fieldKey: "dateOfJoining",    label: "Date of Joining",     section: "Employment Details", inputType: "date",   defaultVisible: true,  defaultRequired: true  },
-  { fieldKey: "workLocation",     label: "Work Location",       section: "Employment Details", inputType: "text",   defaultVisible: true,  defaultRequired: false },
-  { fieldKey: "status",           label: "Status",              section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: false },
-  { fieldKey: "probationPeriod",  label: "Probation Period (days)", section: "Employment Details", inputType: "number", defaultVisible: true, defaultRequired: false },
-  { fieldKey: "confirmationDate", label: "Confirmation Date",   section: "Employment Details", inputType: "date",   defaultVisible: false, defaultRequired: false },
-  { fieldKey: "noticePeriod",     label: "Notice Period (days)", section: "Employment Details", inputType: "number", defaultVisible: true, defaultRequired: false },
-  { fieldKey: "reportingManager", label: "Reporting Manager",   section: "Employment Details", inputType: "text",   defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "employeeId",          label: "Employee ID",            section: "Employment Details", inputType: "text",   defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "department",          label: "Department",             section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: true  },
+  { fieldKey: "designation",         label: "Designation",            section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: true  },
+  { fieldKey: "employmentType",      label: "Employment Type",        section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: true  },
+  { fieldKey: "dateOfJoining",       label: "Date of Joining",        section: "Employment Details", inputType: "date",   defaultVisible: true,  defaultRequired: true  },
+  { fieldKey: "workLocation",        label: "Work Location",          section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "complianceZone",      label: "Compliance Zone",        section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "complianceSkillLevel",label: "Compliance Skill Level", section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: false },
+  // skillLevel hidden by default in employee form (it's primarily a labour field)
+  { fieldKey: "skillLevel",          label: "Skill Level",            section: "Employment Details", inputType: "select", defaultVisible: false, defaultRequired: false },
+  { fieldKey: "status",              label: "Status",                 section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "probationPeriod",     label: "Probation Period (days)", section: "Employment Details", inputType: "number", defaultVisible: true, defaultRequired: false },
+  { fieldKey: "confirmationDate",    label: "Confirmation Date",   section: "Employment Details", inputType: "date",   defaultVisible: false, defaultRequired: false },
+  { fieldKey: "noticePeriod",        label: "Notice Period (days)", section: "Employment Details", inputType: "number", defaultVisible: true, defaultRequired: false },
+  { fieldKey: "reportingManager",    label: "Reporting Manager",   section: "Employment Details", inputType: "text",   defaultVisible: true,  defaultRequired: false },
 
   // Financial Information
   { fieldKey: "basicSalary",          label: "Basic Pay",               section: "Financial Information", inputType: "number", defaultVisible: true,  defaultRequired: false },

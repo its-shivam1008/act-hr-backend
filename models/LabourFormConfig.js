@@ -19,13 +19,13 @@ const LABOUR_FIELD_DEFINITIONS = [
   { fieldKey: "dateOfJoining",      label: "Date of Joining",      section: "Employment Details",    inputType: "date",   defaultVisible: true,  defaultRequired: true  },
   { fieldKey: "climsId",            label: "CLIMS ID",             section: "Employment Details",    inputType: "text",   defaultVisible: true,  defaultRequired: false },
   { fieldKey: "formA",              label: "Form A",               section: "Employment Details",    inputType: "text",   defaultVisible: false, defaultRequired: false },
-  { fieldKey: "locationId",         label: "Location",             section: "Employment Details",    inputType: "text",   defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "locationId",         label: "Location",             section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: false },
   { fieldKey: "employmentType",     label: "Employment Type",      section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: false },
-  { fieldKey: "agencyId",           label: "Agency",               section: "Employment Details",    inputType: "text",   defaultVisible: false, defaultRequired: false },
+  { fieldKey: "agencyId",           label: "Agency",               section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: false },
   { fieldKey: "department",         label: "Department",           section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: true  },
-  { fieldKey: "designation",        label: "Designation",          section: "Employment Details",    inputType: "text",   defaultVisible: true,  defaultRequired: false },
-  { fieldKey: "complianceZone",     label: "Compliance Zone",      section: "Employment Details",    inputType: "text",   defaultVisible: false, defaultRequired: false },
-  { fieldKey: "complianceSkillLevel", label: "Compliance Skill Level", section: "Employment Details", inputType: "text", defaultVisible: false, defaultRequired: false },
+  { fieldKey: "designation",        label: "Designation",          section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "complianceZone",     label: "Compliance Zone",      section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: false },
+  { fieldKey: "complianceSkillLevel", label: "Compliance Skill Level", section: "Employment Details", inputType: "select", defaultVisible: true,  defaultRequired: false },
   { fieldKey: "status",             label: "Status",               section: "Employment Details",    inputType: "select", defaultVisible: true,  defaultRequired: false },
 
   // Skill Information
