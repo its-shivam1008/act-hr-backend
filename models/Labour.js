@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
+const OID = Schema.Types.ObjectId;
 
 const LabourSchema = new mongoose.Schema(
   {
@@ -18,17 +20,24 @@ const LabourSchema = new mongoose.Schema(
     bloodGroup:         { type: String, enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
     allergies:          String,
 
-    // ── Employment Details ────────────────────────────────────────────────
-    dateOfJoining:     Date,
-    climsId:           String,
-    formA:             String,
-    locationId:        String,
-    employmentType:    { type: String, enum: ["Full-Time", "Part-Time", "Contract", "Daily Wage", "Seasonal"] },
-    agencyId:          String,
-    department:        String,
-    designation:       String,
-    complianceZone:    String,
-    complianceSkillLevel: String,
+    // ── Employment Details — ObjectId refs to master data ────────────────────
+    dateOfJoining:      Date,
+    climsId:            String,
+    formA:              String,
+    locationId:         { type: OID, ref: "Location",      default: null },
+    locationName:       String,   // denormalised
+    employmentType:     { type: OID, ref: "EmploymentType", default: null },
+    employmentTypeName: String,
+    agencyId:           { type: OID, ref: "Agency",         default: null },
+    agencyName:         String,
+    department:         { type: OID, ref: "Department",     default: null },
+    departmentName:     String,
+    designation:        { type: OID, ref: "Designation",    default: null },
+    designationName:    String,
+    complianceZone:     { type: OID, ref: "ComplianceZone", default: null },
+    complianceZoneName: String,
+    complianceSkillLevel:     { type: OID, ref: "SkillLevel", default: null },
+    complianceSkillLevelName: String,
     status: {
       type: String,
       enum: ["Active", "On Leave", "Terminated", "Resigned"],
@@ -36,7 +45,8 @@ const LabourSchema = new mongoose.Schema(
     },
 
     // ── Skill Information ─────────────────────────────────────────────────
-    skillLevel:          String,
+    skillLevel:         { type: OID, ref: "SkillLevel", default: null },
+    skillLevelName:     String,
     certifications:      String,
     previousExperience:  String,
 
