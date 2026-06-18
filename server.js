@@ -63,6 +63,9 @@ app.use("/api/assets", require("./routes/assets/assetRoutes"));
 // ── Leave Management ───────────────────────────────────────────────────────
 app.use("/api/leaves", require("./routes/leave/leaveRoutes"));
 
+// ── Performance Management ─────────────────────────────────────────────────
+app.use("/api/performance", require("./routes/performanceRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
