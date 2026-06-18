@@ -2,157 +2,161 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 const OID = Schema.Types.ObjectId;
 
-const LabourSchema = new mongoose.Schema(
+const LabourSchema = new Schema(
   {
+    // ── Org scope ─────────────────────────────────────────────────────────
     organisationId: { type: String, required: true, index: true },
-    labourId: { type: String, sparse: true },
+    labourId:       { type: String, sparse: true },
 
     // ── Personal Information ──────────────────────────────────────────────
-    firstName:          String,
-    lastName:           String,
-    email:              { type: String, lowercase: true, trim: true },
-    mobile:             String,
-    sex:                { type: String, enum: ["Male", "Female", "Other", "Prefer not to say"] },
-    dateOfBirth:        Date,
-    nationality:        String,
-    identificationMark: String,
-    medicalCondition:   String,
-    bloodGroup:         { type: String, enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
-    allergies:          String,
+    personalInfo: {
+      firstName:          String,
+      lastName:           String,
+      email:              { type: String, lowercase: true, trim: true },
+      mobile:             String,
+      sex:                String,
+      dateOfBirth:        Date,
+      nationality:        String,
+      identificationMark: String,
+      medicalCondition:   String,
+    },
 
-    // ── Employment Details — ObjectId refs to master data ────────────────────
-    dateOfJoining:      Date,
-    climsId:            String,
-    formA:              String,
-    locationId:         { type: OID, ref: "Location",      default: null },
-    locationName:       String,   // denormalised
-    employmentType:     { type: OID, ref: "EmploymentType", default: null },
-    employmentTypeName: String,
-    agencyId:           { type: OID, ref: "Agency",         default: null },
-    agencyName:         String,
-    department:         { type: OID, ref: "Department",     default: null },
-    departmentName:     String,
-    designation:        { type: OID, ref: "Designation",    default: null },
-    designationName:    String,
-    complianceZone:     { type: OID, ref: "ComplianceZone", default: null },
-    complianceZoneName: String,
-    complianceSkillLevel:     { type: OID, ref: "SkillLevel", default: null },
-    complianceSkillLevelName: String,
-    status: {
-      type: String,
-      enum: ["Active", "On Leave", "Terminated", "Resigned"],
-      default: "Active",
+    // ── Health ────────────────────────────────────────────────────────────
+    health: {
+      bloodGroup: { type: String, enum: ["A+","A-","B+","B-","AB+","AB-","O+","O-"] },
+      allergies:  String,
+    },
+
+    // ── Employment (ObjectId refs to master data) ─────────────────────────
+    employment: {
+      dateOfJoining:            Date,
+      climsId:                  String,
+      formA:                    String,
+      locationId:               { type: OID, ref: "Location",      default: null },
+      locationName:             String,
+      employmentType:           { type: OID, ref: "EmploymentType", default: null },
+      employmentTypeName:       String,
+      agencyId:                 { type: OID, ref: "Agency",         default: null },
+      agencyName:               String,
+      department:               { type: OID, ref: "Department",     default: null },
+      departmentName:           String,
+      designation:              { type: OID, ref: "Designation",    default: null },
+      designationName:          String,
+      complianceZone:           { type: OID, ref: "ComplianceZone", default: null },
+      complianceZoneName:       String,
+      complianceSkillLevel:     { type: OID, ref: "SkillLevel",     default: null },
+      complianceSkillLevelName: String,
+      status: {
+        type: String,
+        enum: ["Active","On Leave","Terminated","Resigned"],
+        default: "Active",
+      },
     },
 
     // ── Skill Information ─────────────────────────────────────────────────
-    skillLevel:         { type: OID, ref: "SkillLevel", default: null },
-    skillLevelName:     String,
-    certifications:      String,
-    previousExperience:  String,
+    skill: {
+      skillLevel:         { type: OID, ref: "SkillLevel", default: null },
+      skillLevelName:     String,
+      certifications:     String,
+      previousExperience: String,
+    },
 
     // ── Safety Information ────────────────────────────────────────────────
-    safetyTraining:     String,
-    safetyTrainingDate: Date,
+    safety: {
+      safetyTraining:     String,
+      safetyTrainingDate: Date,
+    },
 
     // ── Work Preferences ──────────────────────────────────────────────────
-    preferredShift:       String,
-    overtimeAvailability: { type: String, enum: ["Yes", "No"] },
-    transportationMode:   String,
+    preferences: {
+      preferredShift:       String,
+      overtimeAvailability: String,
+      transportationMode:   String,
+    },
 
     // ── Financial Information ─────────────────────────────────────────────
-    basicPay:              Number,
-    hra:                   Number,
-    da:                    Number,
-    convenienceAllowance:  Number,
-    foodAllowance:         Number,
-    siteAllowance:         Number,
-    monthlyRate:           Number,
-    hourlyRate:            Number,
-    medical:               Number,
-    bonus:                 Number,
-    annualLeave:           Number,
-    retrenchment:          Number,
-    ratePerDay:            Number,
+    financial: {
+      basicPay:             Number,
+      hra:                  Number,
+      da:                   Number,
+      convenienceAllowance: Number,
+      foodAllowance:        Number,
+      siteAllowance:        Number,
+      monthlyRate:          Number,
+      hourlyRate:           Number,
+      medical:              Number,
+      bonus:                Number,
+      annualLeave:          Number,
+      retrenchment:         Number,
+      ratePerDay:           Number,
+    },
 
     // ── Statutory Details ─────────────────────────────────────────────────
-    pan:    String,
-    aadhaar: String,
-    pfUan:   String,
-    esic:    String,
+    statutory: {
+      pan:    String,
+      aadhaar:String,
+      pfUan:  String,
+      esic:   String,
+    },
 
     // ── Banking Information ───────────────────────────────────────────────
-    bankName:      String,
-    branchName:    String,
-    ifsc:          String,
-    accountNumber: String,
+    banking: {
+      bankName:      String,
+      branchName:    String,
+      ifsc:          String,
+      accountNumber: String,
+    },
 
-    // ── Address Information ───────────────────────────────────────────────
-    localAddress:      String,
-    state:             String,
-    city:              String,
-    pincode:           String,
-    permanentAddress:  String,
-    permanentState:    String,
-    permanentCity:     String,
-    permanentPincode:  String,
-
-    // ── Emergency Contact ─────────────────────────────────────────────────
-    emergencyContactName:     String,
-    emergencyContactRelation: String,
-    emergencyContactPhone:    String,
+    // ── Address & Emergency Contact ───────────────────────────────────────
+    address: {
+      localAddress:             String,
+      state:                    String,
+      city:                     String,
+      pincode:                  String,
+      permanentAddress:         String,
+      permanentState:           String,
+      permanentCity:            String,
+      permanentPincode:         String,
+      emergencyContactName:     String,
+      emergencyContactRelation: String,
+      emergencyContactPhone:    String,
+    },
 
     // ── Nominee Information ───────────────────────────────────────────────
-    nomineeName:     String,
-    nomineeAddress:  String,
-    nomineeRelation: String,
-    nomineePhone:    String,
+    nominee: {
+      nomineeName:     String,
+      nomineeAddress:  String,
+      nomineeRelation: String,
+      nomineePhone:    String,
+    },
 
     // ── Documents ─────────────────────────────────────────────────────────
-    aadhaarPhoto:       String,
-    passbook:           String,
-    photo:              String,
-    education:          String,
-    // Labour-specific docs
-    drivingLicense:     String,
-    policeClearance:    String,
-    medicalCertificate: String,
-    photoUrl:           String,
+    documents: {
+      aadhaarPhoto:       String,
+      passbook:           String,
+      photo:              String,
+      education:          String,
+      drivingLicense:     String,
+      policeClearance:    String,
+      medicalCertificate: String,
+      photoUrl:           String,
+    },
 
-    // ── Family Members (Group Health Insurance) ───────────────────────────────
+    // ── Dynamic table arrays ──────────────────────────────────────────────
     familyMembers: [
       {
-        name:         String,
-        contactNo:    String,
-        dob:          Date,
-        age:          Number,
-        gender:       { type: String, enum: ["Male", "Female", "Other"] },
-        relationship: String,
+        name: String, contactNo: String, dob: Date,
+        age: Number, gender: String, relationship: String,
       },
     ],
-
-    // ── Education ─────────────────────────────────────────────────────────────
     basicEducation: [
-      {
-        education: String,
-        board:     String,
-        marks:     String,
-        year:      String,
-        stream:    String,
-        grade:     String,
-      },
+      { education: String, board: String, marks: String, year: String, stream: String, grade: String },
     ],
     technicalEducation: [
-      {
-        education: String,
-        board:     String,
-        marks:     String,
-        year:      String,
-        stream:    String,
-        grade:     String,
-      },
+      { education: String, board: String, marks: String, year: String, stream: String, grade: String },
     ],
 
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: OID, ref: "User" },
   },
   { timestamps: true }
 );

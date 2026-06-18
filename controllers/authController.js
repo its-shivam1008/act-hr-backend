@@ -151,14 +151,14 @@ const login = async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
       // ── Fallback: check if this is an employee trying to log in ──────────
-      const emp = await Employee.findOne({ workEmail: email.toLowerCase().trim() }).select("+password");
+      const emp = await Employee.findOne({ "personalInfo.workEmail": email.toLowerCase().trim() }).select("+password");
       if (emp) {
-        if (emp.status === "Terminated")
+        if (emp.employment?.status === "Terminated")
           return res.status(403).json({ success: false, message: "Account deactivated. Contact HR." });
 
         // If no password stored yet, set it to bcrypt-hash of employeeId (default password)
         if (!emp.password) {
-          emp.password = await bcrypt.hash(emp.employeeId, 10);
+          emp.password = await bcrypt.hash(emp.personalInfo?.employeeId || "password123", 10);
           await emp.save({ validateBeforeSave: false });
         }
 
@@ -176,13 +176,13 @@ const login = async (req, res) => {
           token:   empToken,
           employee: {
             _id:         emp._id,
-            employeeId:  emp.employeeId,
-            firstName:   emp.firstName,
-            lastName:    emp.lastName,
-            workEmail:   emp.workEmail,
-            department:  emp.department,
-            designation: emp.designation,
-            status:      emp.status,
+            employeeId:  emp.personalInfo?.employeeId,
+            firstName:   emp.personalInfo?.firstName,
+            lastName:    emp.personalInfo?.lastName,
+            workEmail:   emp.personalInfo?.workEmail,
+            department:  emp.employment?.departmentName,
+            designation: emp.employment?.designationName,
+            status:      emp.employment?.status,
             organisationId: emp.organisationId,
           },
         });

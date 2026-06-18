@@ -9,16 +9,16 @@ const employeeLogin = async (req, res) => {
     if (!email || !password)
       return res.status(422).json({ success: false, message: "Email and password are required" });
 
-    const emp = await Employee.findOne({ workEmail: email.toLowerCase().trim() }).select("+password");
+    const emp = await Employee.findOne({ "personalInfo.workEmail": email.toLowerCase().trim() }).select("+password");
     if (!emp)
       return res.status(401).json({ success: false, message: "Invalid email or password" });
 
-    if (emp.status === "Terminated")
+    if (emp.employment?.status === "Terminated")
       return res.status(403).json({ success: false, message: "Your account has been deactivated. Contact HR." });
 
     // If no password set yet (old record), initialise from employeeId as bcrypt hash
     if (!emp.password) {
-      emp.password = await bcrypt.hash(emp.employeeId, 10);
+      emp.password = await bcrypt.hash(emp.personalInfo?.employeeId || "password123", 10);
       await emp.save({ validateBeforeSave: false });
     }
 
@@ -38,14 +38,14 @@ const employeeLogin = async (req, res) => {
       token,
       employee: {
         _id:         emp._id,
-        employeeId:  emp.employeeId,
-        firstName:   emp.firstName,
-        lastName:    emp.lastName,
-        workEmail:   emp.workEmail,
-        department:  emp.department,
-        designation: emp.designation,
-        status:      emp.status,
-        photoUrl:    emp.photoUrl,
+        employeeId:  emp.personalInfo?.employeeId,
+        firstName:   emp.personalInfo?.firstName,
+        lastName:    emp.personalInfo?.lastName,
+        workEmail:   emp.personalInfo?.workEmail,
+        department:  emp.employment?.departmentName,
+        designation: emp.employment?.designationName,
+        status:      emp.employment?.status,
+        photoUrl:    emp.documents?.photoUrl,
         organisationId: emp.organisationId,
       },
     });
