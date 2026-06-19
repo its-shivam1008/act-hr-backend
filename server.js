@@ -41,9 +41,27 @@ app.use(
   "/api/masterdata/locations",
   require("./routes/masterdata/locations/locationRoutes"),
 );
+app.use(
+  "/api/masterdata/grades",
+  require("./routes/masterdata/grades/gradeRoutes"),
+);
+app.use(
+  "/api/masterdata/skills",
+  require("./routes/masterdata/skills/skillRoutes"),
+);
+app.use(
+  "/api/skill-assignments",
+  require("./routes/masterdata/skills/skillAssignmentRoutes"),
+);
 
 // ── Employee Master ────────────────────────────────────────────────────────
 app.use("/api/employees", require("./routes/employees/employeeRoutes"));
+
+// ── Generic file upload (Cloudinary) ──────────────────────────────────────
+app.use("/api/upload", require("./routes/uploadRoutes"));
+
+// ── Documents Management ───────────────────────────────────────────────────
+app.use("/api/documents", require("./routes/documentRoutes"));
 
 // ── Labour Master ──────────────────────────────────────────────────────────
 app.use("/api/labours", require("./routes/labours/labourRoutes"));

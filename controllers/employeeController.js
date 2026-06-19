@@ -381,4 +381,55 @@ const saveFormConfig = async (req, res) => {
   }
 };
 
-module.exports = { getEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee, getFormConfig, saveFormConfig };
+// ── GET /api/employees/hierarchy ─────────────────────────────────────────────
+// Returns a tree: each node = flat employee + children[]
+const getHierarchy = async (req, res) => {
+  try {
+    const orgId = req.user.organisationId;
+    const all = await Employee.find({ organisationId: orgId }).lean();
+    const flat = all.map(nestedToFlat);
+
+    // Build id → node map
+    const map = {};
+    flat.forEach(e => { map[e._id] = { ...e, children: [] }; });
+
+    const roots = [];
+    flat.forEach(e => {
+      const mgr = e.reportingManager;
+      if (mgr && map[mgr] && String(mgr) !== String(e._id)) {
+        map[mgr].children.push(map[e._id]);
+      } else {
+        roots.push(map[e._id]);
+      }
+    });
+
+    // Ensure exactly one root (CEO) node at the top. If multiple unlinked roots exist,
+    // designate the best candidate (or first root) as CEO and attach the rest under them.
+    let tree = [];
+    if (roots.length > 1) {
+      let ceoIndex = 0;
+      for (let i = 0; i < roots.length; i++) {
+        const des = String(roots[i].designationName || "").toLowerCase();
+        if (des.includes("ceo") || des.includes("director") || des.includes("president") || des.includes("manager") || des.includes("developer")) {
+          ceoIndex = i;
+          break;
+        }
+      }
+      const ceoNode = roots[ceoIndex];
+      roots.forEach((node, i) => {
+        if (i !== ceoIndex) {
+          ceoNode.children.push(node);
+        }
+      });
+      tree = [ceoNode];
+    } else {
+      tree = roots.length > 0 ? roots : flat.map(e => ({ ...map[e._id], children: [] }));
+    }
+    return res.json({ success: true, data: tree });
+  } catch (err) {
+    console.error("[GetHierarchy]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee, getFormConfig, saveFormConfig, getHierarchy };
