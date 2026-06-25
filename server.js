@@ -66,6 +66,15 @@ app.use("/api/documents", require("./routes/documentRoutes"));
 // ── Labour Master ──────────────────────────────────────────────────────────
 app.use("/api/labours", require("./routes/labours/labourRoutes"));
 
+// ── Contractor Billing / Invoices ──────────────────────────────────────────
+app.use("/api/contractor-billing", require("./routes/contractor/invoiceRoutes"));
+
+// ── Attendance Capture & Muster Roll ───────────────────────────────────────
+app.use("/api/attendance", require("./routes/attendance/attendanceRoutes"));
+
+// ── Gate Pass Management ───────────────────────────────────────────────────
+app.use("/api/gatepasses", require("./routes/gatepass/gatePassRoutes"));
+
 // ── Wage Categories (Minimum Wage Master) ─────────────────────────────────
 app.use("/api/wage-categories", require("./routes/wageCategories/wageCategoryRoutes"));
 

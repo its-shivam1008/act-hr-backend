@@ -48,6 +48,38 @@ const AgencySchema = new mongoose.Schema(
       default: "",
     },
 
+    // ── Licence & Contract dates ────────────────────────────────────────────
+    licenseNo: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    licenseExpiry: {
+      type: Date,
+      default: null,
+    },
+
+    contractStartDate: {
+      type: Date,
+      default: null,
+    },
+
+    contractEndDate: {
+      type: Date,
+      default: null,
+    },
+
+    complianceScore: {
+      type: Number,
+      default: 100,
+    },
+
+    performanceRating: {
+      type: Number,
+      default: 5,
+    },
+
     // ── Status ─────────────────────────────────────────────────────────────
     isActive: {
       type: Boolean,
