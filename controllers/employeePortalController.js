@@ -55,7 +55,6 @@ const employeeLogin = async (req, res) => {
   }
 };
 
-// ── GET /api/employee-portal/me ───────────────────────────────────────────────
 const getMe = async (req, res) => {
   try {
     const emp = await Employee.findById(req.employee._id);
@@ -66,4 +65,19 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { employeeLogin, getMe };
+const getTransfers = async (req, res) => {
+  try {
+    const Transfer = require("../models/transferModels/Transfer");
+    const transfers = await Transfer.find({
+      employee: req.employee._id,
+      organisationId: req.employee.organisationId
+    }).sort({ effectiveDate: -1 });
+
+    return res.json({ success: true, data: transfers });
+  } catch (err) {
+    console.error("[EmployeePortal GetTransfers]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { employeeLogin, getMe, getTransfers };
