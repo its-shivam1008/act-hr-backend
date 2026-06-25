@@ -6,6 +6,7 @@ const EmploymentType  = require("../models/employmentTypeModels/EmploymentType")
 const Location        = require("../models/locationModels/Location");
 const SkillLevel      = require("../models/skillLevelModels/SkillLevel");
 const ComplianceZone  = require("../models/wageCategories/ComplianceZone");
+const Grade           = require("../models/gradeModels/Grade");
 const mongoose        = require("mongoose");
 
 // ── Resolve denormalised names from master data ───────────────────────────────
@@ -24,6 +25,7 @@ const resolveNames = async (body) => {
     tryName(ComplianceZone, body.complianceZone,       "complianceZoneName"),
     tryName(SkillLevel,     body.complianceSkillLevel, "complianceSkillLevelName"),
     tryName(SkillLevel,     body.skillLevel,           "skillLevelName"),
+    tryName(Grade,          body.grade,                "gradeName"),
   ]);
   return extra;
 };
@@ -37,6 +39,7 @@ const POPULATE = [
   { path: "employment.complianceZone",     select: "name" },
   { path: "employment.complianceSkillLevel", select: "name levelNumber" },
   { path: "employment.skillLevel",         select: "name levelNumber" },
+  { path: "employment.grade",              select: "name" },
 ];
 
 // ── flat req.body → nested Employee document ──────────────────────────────────
@@ -66,6 +69,8 @@ const flatToNested = (body, names = {}) => ({
     complianceSkillLevelName: names.complianceSkillLevelName ?? body.complianceSkillLevelName,
     skillLevel:               body.skillLevel,
     skillLevelName:           names.skillLevelName           ?? body.skillLevelName,
+    grade:                    body.grade,
+    gradeName:                names.gradeName                ?? body.gradeName,
     status:          body.status,
     probationPeriod: body.probationPeriod, noticePeriod: body.noticePeriod,
     reportingManager: body.reportingManager,
@@ -158,6 +163,8 @@ const nestedToFlat = (doc) => {
     complianceSkillLevelName: e.complianceSkillLevelName ?? d.complianceSkillLevelName,
     skillLevel:               e.skillLevel               ?? d.skillLevel,
     skillLevelName:           e.skillLevelName           ?? d.skillLevelName,
+    grade:                    e.grade                    ?? d.grade,
+    gradeName:                e.gradeName                ?? d.gradeName,
     status:           e.status           ?? d.status,
     probationPeriod:  e.probationPeriod  ?? d.probationPeriod,
     noticePeriod:     e.noticePeriod     ?? d.noticePeriod,

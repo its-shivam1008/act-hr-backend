@@ -41,6 +41,8 @@ const EmployeeSchema = new Schema(
       complianceSkillLevelName: String,
       skillLevel:               { type: OID, ref: "SkillLevel",     default: null },
       skillLevelName:           String,
+      grade:                    { type: OID, ref: "Grade",          default: null },
+      gradeName:                String,
       status: {
         type: String,
         enum: ["Active","On Leave","Terminated","Resigned"],

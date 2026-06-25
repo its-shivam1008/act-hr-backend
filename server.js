@@ -87,11 +87,26 @@ app.use(
 // ── Asset Management ───────────────────────────────────────────────────────
 app.use("/api/assets", require("./routes/assets/assetRoutes"));
 
+// ── Transfer Management ────────────────────────────────────────────────────
+app.use("/api/transfers", require("./routes/transfers/transferRoutes"));
+
 // ── Leave Management ───────────────────────────────────────────────────────
 app.use("/api/leaves", require("./routes/leave/leaveRoutes"));
 
 // ── Performance Management ─────────────────────────────────────────────────
 app.use("/api/performance", require("./routes/performanceRoutes"));
+
+// ── Payroll Masters (Deductions & Additions) ───────────────────────────────
+app.use("/api/payroll/masters", require("./routes/payroll/payrollMasterRoutes"));
+
+// ── Salary Advances ────────────────────────────────────────────────────────
+app.use("/api/payroll/advances", require("./routes/payroll/advanceRoutes"));
+
+// ── Loan Management ────────────────────────────────────────────────────────
+app.use("/api/payroll/loans", require("./routes/payroll/loanRoutes"));
+
+// ── Payroll Adjustments ────────────────────────────────────────────────────
+app.use("/api/payroll/adjustments", require("./routes/payroll/adjustmentRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Server Running");
