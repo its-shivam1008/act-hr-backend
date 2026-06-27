@@ -5,12 +5,13 @@ const { protect } = require("../../middleware/authMiddleware");
 const {
   getEmployees, getEmployee,
   createEmployee, updateEmployee, deleteEmployee,
-  getFormConfig, updateFormConfig,
+  getFormConfig, saveFormConfig, getHierarchy,
 } = require("../../controllers/employeeController");
 
 // Form config must come before /:id to avoid route collision
 router.get ("/form-config", protect, getFormConfig);
-router.put ("/form-config", protect, updateFormConfig);
+router.put ("/form-config", protect, saveFormConfig);
+router.get ("/hierarchy",   protect, getHierarchy);
 
 router.get ("/",     protect, getEmployees);
 router.post("/",     protect, createEmployee);

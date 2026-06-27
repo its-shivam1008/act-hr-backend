@@ -45,7 +45,9 @@ exports.getAgency = async (req, res) => {
 // ── POST /api/masterdata/agencies ─────────────────────────────────────────
 exports.createAgency = async (req, res) => {
   try {
-    const { agencyName, contactPerson, phone, email, address, isActive } = req.body;
+    const { agencyName, contactPerson, phone, email, address,
+            licenseNo, licenseExpiry, contractStartDate, contractEndDate,
+            isActive } = req.body;
 
     const agency = await Agency.create({
       organisationId: getOrgId(req),
@@ -54,6 +56,10 @@ exports.createAgency = async (req, res) => {
       phone,
       email,
       address,
+      licenseNo,
+      licenseExpiry:     licenseExpiry     || null,
+      contractStartDate: contractStartDate || null,
+      contractEndDate:   contractEndDate   || null,
       isActive: isActive !== undefined ? isActive : true,
     });
 
@@ -72,7 +78,11 @@ exports.createAgency = async (req, res) => {
 // ── PUT /api/masterdata/agencies/:id ─────────────────────────────────────
 exports.updateAgency = async (req, res) => {
   try {
-    const allowed = ["agencyName", "contactPerson", "phone", "email", "address", "isActive"];
+    const allowed = [
+      "agencyName", "contactPerson", "phone", "email", "address",
+      "licenseNo", "licenseExpiry", "contractStartDate", "contractEndDate",
+      "complianceScore", "performanceRating", "isActive",
+    ];
     const updates = {};
     allowed.forEach((key) => {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
