@@ -1,0 +1,35 @@
+const {
+  Program,
+  CalendarSession,
+  AttendanceSession,
+  Participant,
+  Certification,
+  SafetyModule,
+  SafetyRisk,
+  Incident,
+  Dataset,
+  PROGRAM_SEED,
+  CALENDAR_SEED,
+  ATT_SESSION_SEED,
+  PARTICIPANT_SEED,
+  CERT_SEED,
+  SAFETY_MODULE_SEED,
+  SAFETY_RISK_SEED,
+  INCIDENT_SEED,
+  EFFECTIVENESS_DEFAULT,
+  SKILLGAP_DEFAULT,
+} = require("../../models/training/TrainingModels");
+const { buildDatasetController, buildListController } = require("../moduleCrudController");
+
+module.exports = {
+  programs: buildListController(Program, PROGRAM_SEED),
+  calendar: buildListController(CalendarSession, CALENDAR_SEED),
+  attendanceSessions: buildListController(AttendanceSession, ATT_SESSION_SEED),
+  participants: buildListController(Participant, PARTICIPANT_SEED),
+  certifications: buildListController(Certification, CERT_SEED),
+  safetyModules: buildListController(SafetyModule, SAFETY_MODULE_SEED),
+  safetyRisks: buildListController(SafetyRisk, SAFETY_RISK_SEED),
+  incidents: buildListController(Incident, INCIDENT_SEED),
+  effectiveness: buildDatasetController(Dataset, "effectiveness", EFFECTIVENESS_DEFAULT),
+  skillGap: buildDatasetController(Dataset, "skill-gap", SKILLGAP_DEFAULT),
+};

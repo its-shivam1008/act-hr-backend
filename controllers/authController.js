@@ -146,7 +146,13 @@ const verifyRegisterOtp = async (req, res) => {
 // POST /api/auth/login
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
+    
+    if (!rawEmail || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    const email = rawEmail.toLowerCase().trim();
 
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
@@ -187,6 +193,17 @@ const login = async (req, res) => {
           },
         });
       }
+
+      const pending = await PendingRegistration.findOne({ email });
+      if (pending) {
+        return res.status(403).json({
+          success: false,
+          message: "Please verify your email first. Check your inbox for the OTP.",
+          email,
+          requiresVerification: true,
+        });
+      }
+
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
     if (user.inviteStatus === "pending") {
@@ -284,7 +301,8 @@ const resendOtp = async (req, res) => {
 // Sends a 6-digit OTP instead of a link → frontend goes to /verify-otp?purpose=forgot-password
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = rawEmail.toLowerCase().trim();
     const user = await User.findOne({ email })
       .select("+emailOtp +emailOtpExpire +otpPurpose");
 
@@ -325,7 +343,8 @@ const forgotPassword = async (req, res) => {
 // Verifies OTP → issues a short-lived reset token → frontend navigates to /reset-password/:token
 const verifyForgotOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email: rawEmail, otp } = req.body;
+    const email = rawEmail.toLowerCase().trim();
     const hashed = hashToken(otp);
 
     const user = await User.findOne({

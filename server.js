@@ -88,6 +88,11 @@ app.use(
 // ── Asset Management ───────────────────────────────────────────────────────
 app.use("/api/assets", require("./routes/assets/assetRoutes"));
 
+// ── Training & L&D ─────────────────────────────────────────────────────────
+app.use("/api/training", require("./routes/training/trainingRoutes"));
+
+// ── Exit & F&F ─────────────────────────────────────────────────────────────
+app.use("/api/exit", require("./routes/exit/exitRoutes"));
 // ── Transfer Management ────────────────────────────────────────────────────
 app.use("/api/transfers", require("./routes/transfers/transferRoutes"));
 
