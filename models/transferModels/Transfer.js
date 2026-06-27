@@ -74,6 +74,11 @@ const TransferSchema = new Schema(
     payrollRevisionTriggered: {
       type: Boolean,
       default: false
+    },
+    transferNature: {
+      type: String,
+      enum: ["Permanent", "Temporary"],
+      default: "Permanent"
     }
   },
   { timestamps: true }

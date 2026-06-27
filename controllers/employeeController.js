@@ -318,6 +318,17 @@ const updateEmployee = async (req, res) => {
       existing.passwordChangedAt = new Date();
     }
 
+    // Compare and delete old document files from Cloudinary
+    const { deleteFromCloudinary } = require("../utils/cloudinary");
+    const docKeys = ["photoUrl", "aadharDocUrl", "passbookUrl", "panDocUrl", "offerLetterUrl"];
+    for (const key of docKeys) {
+      const oldUrl = existing.documents?.[key];
+      const newUrl = nested.documents?.[key];
+      if (oldUrl && newUrl && oldUrl !== newUrl) {
+        deleteFromCloudinary(oldUrl);
+      }
+    }
+
     Object.assign(existing, nested);
     await existing.save();
 
@@ -334,6 +345,17 @@ const deleteEmployee = async (req, res) => {
   try {
     const emp = await Employee.findOneAndDelete({ _id: req.params.id, organisationId: req.user.organisationId });
     if (!emp) return res.status(404).json({ success: false, message: "Employee not found" });
+
+    // Clean up document files from Cloudinary
+    const { deleteFromCloudinary } = require("../utils/cloudinary");
+    const docKeys = ["photoUrl", "aadharDocUrl", "passbookUrl", "panDocUrl", "offerLetterUrl"];
+    for (const key of docKeys) {
+      const url = emp.documents?.[key];
+      if (url) {
+        deleteFromCloudinary(url);
+      }
+    }
+
     return res.json({ success: true, message: "Employee deleted" });
   } catch (err) {
     console.error("[DeleteEmployee]", err.message);

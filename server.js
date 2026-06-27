@@ -71,6 +71,7 @@ app.use("/api/contractor-billing", require("./routes/contractor/invoiceRoutes"))
 
 // ── Attendance Capture & Muster Roll ───────────────────────────────────────
 app.use("/api/attendance", require("./routes/attendance/attendanceRoutes"));
+app.use("/api/regularizations", require("./routes/attendance/regularizationRoutes"));
 
 // ── Gate Pass Management ───────────────────────────────────────────────────
 app.use("/api/gatepasses", require("./routes/gatepass/gatePassRoutes"));

@@ -282,15 +282,32 @@ const createLabour = async (req, res) => {
 // ── PUT /api/labours/:id ──────────────────────────────────────────────────────
 const updateLabour = async (req, res) => {
   try {
+    const orgId = req.user.organisationId;
+    const existing = await Labour.findOne({ _id: req.params.id, organisationId: orgId });
+    if (!existing) return res.status(404).json({ success: false, message: "Labour record not found" });
+
     const names  = await resolveNames(req.body);
     const nested = flatToNested(req.body, names);
-    const labour = await Labour.findOneAndUpdate(
-      { _id: req.params.id, organisationId: req.user.organisationId },
-      { $set: nested },
-      { new: true, runValidators: true }
-    ).populate(POPULATE).lean();
-    if (!labour) return res.status(404).json({ success: false, message: "Labour record not found" });
-    return res.json({ success: true, labour: nestedToFlat(labour) });
+
+    // Compare and delete old document files from Cloudinary
+    const { deleteFromCloudinary } = require("../utils/cloudinary");
+    const docKeys = [
+      "aadhaarPhoto", "passbook", "photo", "education",
+      "drivingLicense", "policeClearance", "medicalCertificate", "photoUrl"
+    ];
+    for (const key of docKeys) {
+      const oldUrl = existing.documents?.[key];
+      const newUrl = nested.documents?.[key];
+      if (oldUrl && newUrl && oldUrl !== newUrl) {
+        deleteFromCloudinary(oldUrl);
+      }
+    }
+
+    Object.assign(existing, nested);
+    await existing.save();
+
+    const updated = await Labour.findById(existing._id).populate(POPULATE).lean();
+    return res.json({ success: true, labour: nestedToFlat(updated) });
   } catch (err) {
     console.error("[UpdateLabour]", err.message);
     return res.status(500).json({ success: false, message: err.message });
@@ -302,6 +319,20 @@ const deleteLabour = async (req, res) => {
   try {
     const labour = await Labour.findOneAndDelete({ _id: req.params.id, organisationId: req.user.organisationId });
     if (!labour) return res.status(404).json({ success: false, message: "Labour record not found" });
+
+    // Clean up document files from Cloudinary
+    const { deleteFromCloudinary } = require("../utils/cloudinary");
+    const docKeys = [
+      "aadhaarPhoto", "passbook", "photo", "education",
+      "drivingLicense", "policeClearance", "medicalCertificate", "photoUrl"
+    ];
+    for (const key of docKeys) {
+      const url = labour.documents?.[key];
+      if (url) {
+        deleteFromCloudinary(url);
+      }
+    }
+
     return res.json({ success: true, message: "Labour record deleted" });
   } catch (err) {
     console.error("[DeleteLabour]", err.message);
