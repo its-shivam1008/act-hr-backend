@@ -9,6 +9,7 @@ const connectDB = async () => {
         serverSelectionTimeoutMS: 5000, // fail fast if Atlas unreachable
       },
     );
+    console.log("mongodb connnected succesfully")
   } catch (error) {
     logger.error(`Database connection failed: ${error.message}`);
     process.exit(1);
