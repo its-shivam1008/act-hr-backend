@@ -96,6 +96,10 @@ app.use("/api/exit", require("./routes/exit/exitRoutes"));
 // ── Transfer Management ────────────────────────────────────────────────────
 app.use("/api/transfers", require("./routes/transfers/transferRoutes"));
 
+// ── Statutory (PF / EPS / EPF / ESI / PT) ────────────────────────────────
+app.use("/api/statutory", require("./routes/statutory/statutoryRoutes"));
+
+
 // ── Leave Management ───────────────────────────────────────────────────────
 app.use("/api/leaves", require("./routes/leave/leaveRoutes"));
 
