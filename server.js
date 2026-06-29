@@ -114,6 +114,12 @@ app.use("/api/payroll/loans", require("./routes/payroll/loanRoutes"));
 // ── Payroll Adjustments ────────────────────────────────────────────────────
 app.use("/api/payroll/adjustments", require("./routes/payroll/adjustmentRoutes"));
 
+// ── Bonus & Incentives ─────────────────────────────────────────────────────
+app.use("/api/bonus", require("./routes/bonus/bonusRoutes"));
+
+// ── Custom Settings CRUD ──────────────────────────────────────────────────
+app.use("/api/settings", require("./routes/settings/customSettingRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
