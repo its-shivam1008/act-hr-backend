@@ -118,6 +118,13 @@ app.use("/api/payroll/loans", require("./routes/payroll/loanRoutes"));
 // ── Payroll Adjustments ────────────────────────────────────────────────────
 app.use("/api/payroll/adjustments", require("./routes/payroll/adjustmentRoutes"));
 
+// ── Recruitment Module ─────────────────────────────────────────────────────
+app.use("/api/recruitment/requisitions", require("./routes/recruitment/requisitionRoutes"));
+app.use("/api/recruitment/candidates",   require("./routes/recruitment/candidateRoutes"));
+app.use("/api/recruitment/interviews",   require("./routes/recruitment/interviewRoutes"));
+app.use("/api/recruitment/offers",       require("./routes/recruitment/offerRoutes"));
+app.use("/api/recruitment/onboarding",   require("./routes/recruitment/onboardingRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
