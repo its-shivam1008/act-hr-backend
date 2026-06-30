@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const LeaveApplicationSchema = new mongoose.Schema(
   {
+    organisationId: { type: String, required: true, index: true },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Employee',
