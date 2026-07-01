@@ -6,11 +6,13 @@ const {
   getLabours, getLabour,
   createLabour, updateLabour, deleteLabour,
   getFormConfig, updateFormConfig,
+  bulkImportLabours,
 } = require("../../controllers/labourController");
 
 // Form config routes must come BEFORE /:id to avoid route collision
 router.get ("/form-config", protect, getFormConfig);
 router.put ("/form-config", protect, updateFormConfig);
+router.post("/bulk-import", protect, bulkImportLabours);
 
 router.get   ("/",    protect, getLabours);
 router.post  ("/",    protect, createLabour);

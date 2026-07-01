@@ -2,7 +2,7 @@ const Roster = require("../../models/attendance/Roster");
 const Employee = require("../../models/Employee");
 const Shift = require("../../models/attendance/Shift");
 const LeaveApplication = require("../../models/leaveModels/LeaveApplication");
-const Holiday = require("../../models/attendance/Holiday");
+const Holiday = require("../../models/leaveModels/Holiday");
 
 // GET /api/attendance/rosters
 const getRosters = async (req, res) => {
