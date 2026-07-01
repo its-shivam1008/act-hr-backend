@@ -387,4 +387,42 @@ const updateFormConfig = async (req, res) => {
   }
 };
 
-module.exports = { getLabours, getLabour, createLabour, updateLabour, deleteLabour, getFormConfig, updateFormConfig };
+// ── POST /api/labours/bulk-import ────────────────────────────────────────────
+// Body: { rows: [ flatLabour, … ] }  (parsed from XLSX on the frontend)
+const bulkImportLabours = async (req, res) => {
+  try {
+    const orgId = req.user.organisationId;
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0)
+      return res.status(422).json({ success: false, message: "No rows provided" });
+
+    const inserted = [];
+    const failed   = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        if (!row.firstName) throw new Error("firstName is required");
+        const names  = await resolveNames(row);
+        const nested = flatToNested(row, names);
+        const labour = await Labour.create({ ...nested, organisationId: orgId, createdBy: req.user._id });
+        inserted.push(nestedToFlat(labour));
+      } catch (err) {
+        failed.push({ row: i + 1, data: row, error: err.message });
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      inserted: inserted.length,
+      failed: failed.length,
+      errors: failed,
+      message: `${inserted.length} labour record(s) imported. ${failed.length} failed.`,
+    });
+  } catch (err) {
+    console.error("[BulkImportLabours]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getLabours, getLabour, createLabour, updateLabour, deleteLabour, getFormConfig, updateFormConfig, bulkImportLabours };
