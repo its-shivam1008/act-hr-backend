@@ -461,4 +461,49 @@ const getHierarchy = async (req, res) => {
   }
 };
 
-module.exports = { getEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee, getFormConfig, saveFormConfig, getHierarchy };
+// ── POST /api/employees/bulk-import ──────────────────────────────────────────
+// Body: { rows: [ flatEmployee, … ] }  (parsed from XLSX on the frontend)
+const bulkImportEmployees = async (req, res) => {
+  try {
+    const orgId = req.user.organisationId;
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0)
+      return res.status(422).json({ success: false, message: "No rows provided" });
+
+    const inserted = [];
+    const failed   = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        // Normalize column aliases from the XLSX template to backend field keys
+        const r = { ...row };
+        if (r.ifsc        && !r.ifscCode)         r.ifscCode        = r.ifsc;
+        if (r.email       && !r.workEmail)        r.workEmail       = r.email;
+        if (r.basicPay    && !r.basicSalary)      r.basicSalary     = r.basicPay;
+        if (r.location    && !r.workLocationName) r.workLocationName = r.location;
+        // Minimal required check – firstName must exist
+        if (!r.firstName) throw new Error("firstName is required");
+        const names  = await resolveNames(r);
+        const nested = flatToNested(r, names);
+        const emp    = await Employee.create({ ...nested, organisationId: orgId, createdBy: req.user._id });
+        inserted.push(nestedToFlat(emp));
+      } catch (err) {
+        failed.push({ row: i + 1, data: row, error: err.message });
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      inserted: inserted.length,
+      failed: failed.length,
+      errors: failed,
+      message: `${inserted.length} employee(s) imported. ${failed.length} failed.`,
+    });
+  } catch (err) {
+    console.error("[BulkImportEmployees]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee, getFormConfig, saveFormConfig, getHierarchy, bulkImportEmployees };

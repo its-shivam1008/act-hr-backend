@@ -73,7 +73,6 @@ app.use("/api/contractor-billing", require("./routes/contractor/invoiceRoutes"))
 app.use("/api/attendance", require("./routes/attendance/attendanceRoutes"));
 app.use("/api/attendance/shifts", require("./routes/attendance/shiftRoutes"));
 app.use("/api/attendance/rosters", require("./routes/attendance/rosterRoutes"));
-app.use("/api/attendance/holidays", require("./routes/attendance/holidayRoutes"));
 app.use("/api/regularizations", require("./routes/attendance/regularizationRoutes"));
 
 // ── Gate Pass Management ───────────────────────────────────────────────────
@@ -120,6 +119,9 @@ app.use("/api/payroll/loans", require("./routes/payroll/loanRoutes"));
 
 // ── Payroll Adjustments ────────────────────────────────────────────────────
 app.use("/api/payroll/adjustments", require("./routes/payroll/adjustmentRoutes"));
+
+// ── Internal Wages ─────────────────────────────────────────────────────────
+app.use("/api/internal-wages", require("./routes/payroll/internalWageRoutes"));
 
 // ── Bonus & Incentives ─────────────────────────────────────────────────────
 app.use("/api/bonus", require("./routes/bonus/bonusRoutes"));
