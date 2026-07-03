@@ -482,6 +482,118 @@ const bulkImportEmployees = async (req, res) => {
         if (r.email       && !r.workEmail)        r.workEmail       = r.email;
         if (r.basicPay    && !r.basicSalary)      r.basicSalary     = r.basicPay;
         if (r.location    && !r.workLocationName) r.workLocationName = r.location;
+        if (r.employmentType && !r.employmentTypeName) r.employmentTypeName = r.employmentType;
+        if (r.department  && !r.departmentName)   r.departmentName  = r.department;
+        if (r.designation && !r.designationName)  r.designationName = r.designation;
+
+        const queryOptions = (name) => ({
+          organisationId: orgId,
+          name: { $regex: new RegExp(`^${name.trim()}$`, "i") }
+        });
+
+        // 1. Department
+        if (r.departmentName && !mongoose.Types.ObjectId.isValid(String(r.department))) {
+          const doc = await Department.findOne(queryOptions(r.departmentName)).lean();
+          if (doc) {
+            r.department = doc._id;
+            r.departmentName = doc.name;
+          }
+        }
+
+        // 2. Designation
+        if (r.designationName && !mongoose.Types.ObjectId.isValid(String(r.designation))) {
+          const doc = await Designation.findOne(queryOptions(r.designationName)).lean();
+          if (doc) {
+            r.designation = doc._id;
+            r.designationName = doc.name;
+          }
+        }
+
+        // 3. Employment Type
+        if (r.employmentTypeName && !mongoose.Types.ObjectId.isValid(String(r.employmentType))) {
+          const doc = await EmploymentType.findOne(queryOptions(r.employmentTypeName)).lean();
+          if (doc) {
+            r.employmentType = doc._id;
+            r.employmentTypeName = doc.name;
+          }
+        }
+
+        // 4. Work Location
+        if (r.workLocationName && !mongoose.Types.ObjectId.isValid(String(r.workLocation))) {
+          const doc = await Location.findOne(queryOptions(r.workLocationName)).lean();
+          if (doc) {
+            r.workLocation = doc._id;
+            r.workLocationName = doc.name;
+          }
+        }
+
+        // 5. Compliance Zone
+        const compZoneVal = r.complianceZoneName || r.complianceZone;
+        if (compZoneVal && !mongoose.Types.ObjectId.isValid(String(r.complianceZone))) {
+          const doc = await ComplianceZone.findOne(queryOptions(compZoneVal)).lean();
+          if (doc) {
+            r.complianceZone = doc._id;
+            r.complianceZoneName = doc.name;
+          }
+        }
+
+        const parseSkillLevel = (str) => {
+          if (!str) return null;
+          const match = str.match(/^(.+?)\s*\(\s*[Ll]evel\s*(\d+)\s*\)/);
+          if (match) {
+            return {
+              name: match[1].trim(),
+              levelNumber: parseInt(match[2], 10)
+            };
+          }
+          return { name: str.trim(), levelNumber: null };
+        };
+
+        // 6. Compliance Skill Level
+        const compSkillVal = r.complianceSkillLevelName || r.complianceSkillLevel;
+        if (compSkillVal && !mongoose.Types.ObjectId.isValid(String(r.complianceSkillLevel))) {
+          const parsed = parseSkillLevel(compSkillVal);
+          if (parsed) {
+            const query = {
+              organisationId: orgId,
+              name: { $regex: new RegExp(`^${parsed.name}$`, "i") }
+            };
+            if (parsed.levelNumber !== null) query.levelNumber = parsed.levelNumber;
+            const doc = await SkillLevel.findOne(query).lean();
+            if (doc) {
+              r.complianceSkillLevel = doc._id;
+              r.complianceSkillLevelName = doc.name;
+            }
+          }
+        }
+
+        // 7. Skill Level
+        const skillLvlVal = r.skillLevelName || r.skillLevel;
+        if (skillLvlVal && !mongoose.Types.ObjectId.isValid(String(r.skillLevel))) {
+          const parsed = parseSkillLevel(skillLvlVal);
+          if (parsed) {
+            const query = {
+              organisationId: orgId,
+              name: { $regex: new RegExp(`^${parsed.name}$`, "i") }
+            };
+            if (parsed.levelNumber !== null) query.levelNumber = parsed.levelNumber;
+            const doc = await SkillLevel.findOne(query).lean();
+            if (doc) {
+              r.skillLevel = doc._id;
+              r.skillLevelName = doc.name;
+            }
+          }
+        }
+
+        // 8. Grade
+        if (r.gradeName && !mongoose.Types.ObjectId.isValid(String(r.grade))) {
+          const doc = await Grade.findOne(queryOptions(r.gradeName)).lean();
+          if (doc) {
+            r.grade = doc._id;
+            r.gradeName = doc.name;
+          }
+        }
+
         // Minimal required check – firstName must exist
         if (!r.firstName) throw new Error("firstName is required");
         const names  = await resolveNames(r);
