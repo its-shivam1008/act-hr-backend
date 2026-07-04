@@ -8,13 +8,21 @@ const SalaryAdvanceSchema = new Schema(
       type: String,
       required: true,
     },
+    personType: {
+      type: String,
+      enum: ["Employee", "Labour"],
+      default: "Employee",
+      index: true,
+    },
     employee: {
       type: OID,
       ref: "Employee",
       required: true,
     },
     employeeName: { type: String },
-    employeeId:   { type: String },
+    employeeId: { type: String },
+    locationId: { type: OID, ref: "Location", default: null, index: true },
+    locationName: { type: String, default: "" },
     amount: {
       type: Number,
       required: true,
@@ -50,7 +58,20 @@ const SalaryAdvanceSchema = new Schema(
       default: "",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
+
+SalaryAdvanceSchema.index({ organisationId: 1, status: 1, createdAt: -1 });
+SalaryAdvanceSchema.index({
+  organisationId: 1,
+  locationId: 1,
+  status: 1,
+  createdAt: -1,
+});
+SalaryAdvanceSchema.index({
+  employeeName: "text",
+  employeeId: "text",
+  reason: "text",
+});
 
 module.exports = mongoose.model("SalaryAdvance", SalaryAdvanceSchema);

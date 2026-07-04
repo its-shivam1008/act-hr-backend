@@ -2,12 +2,19 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 const OID = Schema.Types.ObjectId;
 
-const EMISchema = new Schema({
-  month:     { type: String },   // e.g. "2023-11"
-  amount:    { type: Number },
-  status:    { type: String, enum: ["Pending", "Recovered", "Waived"], default: "Pending" },
-  recoveredOn: { type: Date, default: null },
-}, { _id: false });
+const EMISchema = new Schema(
+  {
+    month: { type: String }, // e.g. "2023-11"
+    amount: { type: Number },
+    status: {
+      type: String,
+      enum: ["Pending", "Recovered", "Waived"],
+      default: "Pending",
+    },
+    recoveredOn: { type: Date, default: null },
+  },
+  { _id: false },
+);
 
 const LoanSchema = new Schema(
   {
@@ -15,13 +22,21 @@ const LoanSchema = new Schema(
       type: String,
       required: true,
     },
+    personType: {
+      type: String,
+      enum: ["Employee", "Labour"],
+      default: "Employee",
+      index: true,
+    },
     employee: {
       type: OID,
       ref: "Employee",
       required: true,
     },
     employeeName: { type: String },
-    employeeId:   { type: String },
+    employeeId: { type: String },
+    locationId: { type: OID, ref: "Location", default: null, index: true },
+    locationName: { type: String, default: "" },
     loanType: {
       type: String, // Personal Loan, Vehicle Loan, Emergency Loan, Salary Advance
       required: true,
@@ -31,7 +46,7 @@ const LoanSchema = new Schema(
       required: true,
     },
     interestRate: {
-      type: Number,    // percentage, 0 for interest-free
+      type: Number, // percentage, 0 for interest-free
       default: 0,
     },
     tenureMonths: {
@@ -61,8 +76,22 @@ const LoanSchema = new Schema(
     },
     emis: [EMISchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
+
+LoanSchema.index({ organisationId: 1, status: 1, createdAt: -1 });
+LoanSchema.index({
+  organisationId: 1,
+  locationId: 1,
+  status: 1,
+  createdAt: -1,
+});
+LoanSchema.index({
+  employeeName: "text",
+  employeeId: "text",
+  loanType: "text",
+  reason: "text",
+});
 
 // Virtual: amount paid
 LoanSchema.virtual("amountPaid").get(function () {
