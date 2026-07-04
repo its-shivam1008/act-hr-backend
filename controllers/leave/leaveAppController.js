@@ -52,9 +52,12 @@ exports.getApplications = async (req, res) => {
     const orgId = req.user.organisationId;
     let query = { organisationId: orgId };
     
-    if (req.user.role === 'employee' || (req.user.personalInfo && req.user.personalInfo.employeeId)) {
+    // Employees have a `personalInfo` object (Employee model); Admins have a `role` field (User model).
+    // If req.user has personalInfo, it is an employee — restrict to their own applications only.
+    if (req.user.personalInfo !== undefined) {
       query.employeeId = req.user._id;
     }
+    // Admins (role: admin/manager/super_admin) see all applications in their organisation.
     
     const applications = await LeaveApplication.find(query)
       .populate('employeeId', 'personalInfo employment')
@@ -71,12 +74,26 @@ exports.applyLeave = async (req, res) => {
     const orgId = req.user.organisationId;
     let { employeeId, leaveType, startDate, endDate, reason, managerId } = req.body;
     
-    if (req.user.personalInfo && req.user.personalInfo.employeeId) {
+    // If the authenticated user is an Employee (has personalInfo), override employeeId with their own ID
+    if (req.user.personalInfo !== undefined) {
       employeeId = req.user._id;
     }
     
     const employee = await Employee.findById(employeeId);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
+    
+    const overlappingApp = await LeaveApplication.findOne({
+      organisationId: orgId,
+      employeeId,
+      status: { $nin: ['Rejected', 'Cancelled'] },
+      $or: [
+        { startDate: { $lte: endDate }, endDate: { $gte: startDate } }
+      ]
+    });
+    
+    if (overlappingApp) {
+      return res.status(400).json({ error: 'Leave application overlaps with an existing one.' });
+    }
     
     const days = await calculateWorkingDays(orgId, employeeId, startDate, endDate);
     if (days === 0) {

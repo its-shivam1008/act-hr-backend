@@ -1,4 +1,12 @@
 const Loan = require("../../models/payrollModels/Loan");
+const { resolveEmployeeSnapshot } = require("../../utils/payrollIdentity");
+const {
+  buildTextSearch,
+  buildLocationFilter,
+  buildDateFilter,
+  parsePaging,
+  paginateModelQuery,
+} = require("../../utils/payrollQuery");
 
 // Helper: generate EMI schedule
 const generateEMISchedule = (principalAmount, tenureMonths, startDate) => {
@@ -21,32 +29,69 @@ const generateEMISchedule = (principalAmount, tenureMonths, startDate) => {
   return emis;
 };
 
+const buildLoanQuery = (orgId, queryString = {}) => {
+  const filters = [{ organisationId: orgId }];
+  const { status, employeeId, personType, search, location, date } =
+    queryString;
+
+  if (status && status !== "All") {
+    filters.push(
+      status.includes(",")
+        ? { status: { $in: status.split(",").map((value) => value.trim()) } }
+        : { status },
+    );
+  }
+  if (employeeId) filters.push({ employee: employeeId });
+  if (personType && personType !== "All") filters.push({ personType });
+  if (location && location !== "All")
+    filters.push(buildLocationFilter(location, ["locationId"]));
+  if (search)
+    filters.push(
+      buildTextSearch(search, [
+        "employeeName",
+        "employeeId",
+        "loanType",
+        "reason",
+      ]),
+    );
+  if (date) filters.push(buildDateFilter(date, ["createdAt"]));
+
+  return filters.length === 1 ? filters[0] : { $and: filters };
+};
+
 // Get all loans
 const getLoans = async (req, res) => {
   try {
-    const { organisationId, status, employeeId } = req.query;
-    const query = {};
-    if (organisationId) query.organisationId = organisationId;
-    if (status)         query.status = status;
-    if (employeeId)     query.employee = employeeId;
+    const orgId = req.query.organisationId || req.user?.organisationId;
+    if (!orgId)
+      return res.status(400).json({ message: "organisationId is required" });
 
-    const loans = await Loan.find(query)
-      .populate("employee", "name employeeId")
-      .sort({ createdAt: -1 });
+    const paging = parsePaging(req.query, 25);
+    const query = buildLoanQuery(orgId, req.query);
 
-    // Attach computed fields
-    const result = loans.map((loan) => {
-      const loanObj = loan.toObject({ virtuals: true });
-      const amountPaid = loan.emis
-        .filter((e) => e.status === "Recovered")
-        .reduce((acc, e) => acc + e.amount, 0);
-      loanObj.amountPaid = amountPaid;
-      loanObj.outstandingBalance = loan.principalAmount - amountPaid;
-      loanObj.emisRemaining = loan.emis.filter((e) => e.status === "Pending").length;
-      return loanObj;
+    const { items, pagination } = await paginateModelQuery({
+      model: Loan,
+      query,
+      page: paging.page,
+      limit: paging.limit,
+      sortBy: paging.sortBy,
+      sortOrder: paging.sortOrder,
+      populate: [{ path: "employee", select: "name employeeId" }],
+      transform: (loan) => {
+        const loanObj = loan.toObject({ virtuals: true });
+        const amountPaid = loan.emis
+          .filter((e) => e.status === "Recovered")
+          .reduce((acc, e) => acc + e.amount, 0);
+        loanObj.amountPaid = amountPaid;
+        loanObj.outstandingBalance = loan.principalAmount - amountPaid;
+        loanObj.emisRemaining = loan.emis.filter(
+          (e) => e.status === "Pending",
+        ).length;
+        return loanObj;
+      },
     });
 
-    res.json(result);
+    res.json({ success: true, data: items, pagination });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -55,11 +100,33 @@ const getLoans = async (req, res) => {
 // Create loan application
 const createLoan = async (req, res) => {
   try {
-    const { principalAmount, tenureMonths, disbursementDate, ...rest } = req.body;
-    const emis = generateEMISchedule(principalAmount, tenureMonths, disbursementDate);
+    const {
+      principalAmount,
+      tenureMonths,
+      disbursementDate,
+      employee,
+      organisationId,
+      ...rest
+    } = req.body;
+    const orgId = organisationId || req.user?.organisationId;
+    if (!orgId)
+      return res.status(400).json({ message: "organisationId is required" });
+
+    const snapshot = await resolveEmployeeSnapshot(orgId, employee);
+    if (!snapshot)
+      return res.status(404).json({ message: "Employee not found" });
+
+    const emis = generateEMISchedule(
+      principalAmount,
+      tenureMonths,
+      disbursementDate,
+    );
     const emiAmount = emis[0]?.amount || 0;
 
     const loan = new Loan({
+      organisationId: orgId,
+      employee,
+      ...snapshot,
       ...rest,
       principalAmount,
       tenureMonths,
@@ -106,7 +173,10 @@ const rejectLoan = async (req, res) => {
 // Get EMI schedule for a loan
 const getLoanEMIs = async (req, res) => {
   try {
-    const loan = await Loan.findById(req.params.id).populate("employee", "name employeeId");
+    const loan = await Loan.findById(req.params.id).populate(
+      "employee",
+      "name employeeId",
+    );
     if (!loan) return res.status(404).json({ message: "Not found" });
     res.json({ loan, emis: loan.emis });
   } catch (err) {
@@ -122,9 +192,10 @@ const recoverEMI = async (req, res) => {
     if (!loan) return res.status(404).json({ message: "Loan not found" });
 
     const emi = loan.emis.find((e) => e.month === emiMonth);
-    if (!emi) return res.status(404).json({ message: "EMI not found for this month" });
+    if (!emi)
+      return res.status(404).json({ message: "EMI not found for this month" });
 
-    emi.status      = "Recovered";
+    emi.status = "Recovered";
     emi.recoveredOn = new Date();
 
     // If all EMIs recovered, close the loan
@@ -138,4 +209,11 @@ const recoverEMI = async (req, res) => {
   }
 };
 
-module.exports = { getLoans, createLoan, approveLoan, rejectLoan, getLoanEMIs, recoverEMI };
+module.exports = {
+  getLoans,
+  createLoan,
+  approveLoan,
+  rejectLoan,
+  getLoanEMIs,
+  recoverEMI,
+};

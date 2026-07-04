@@ -20,11 +20,57 @@ exports.getBalances = async (req, res) => {
     }
 
     const year = new Date().getFullYear();
-    const balances = await LeaveBalance.find({
+    let balances = await LeaveBalance.find({
       organisationId: orgId,
       employeeId,
       year
-    }).populate('leaveType', 'name code lopIfExceeded encashmentAllowed');
+    });
+
+    const leaveTypes = await LeaveType.find({ organisationId: orgId });
+    
+    let balancesChanged = false;
+    const balanceMap = new Map();
+    balances.forEach(b => balanceMap.set(b.leaveType.toString(), b));
+
+    for (const type of leaveTypes) {
+      const typeIdStr = type._id.toString();
+      const existingBalance = balanceMap.get(typeIdStr);
+
+      if (!existingBalance) {
+        // Create missing balance
+        const newBalance = new LeaveBalance({
+          organisationId: orgId,
+          employeeId,
+          leaveType: type._id,
+          total: type.daysPerYear,
+          used: 0,
+          balance: type.daysPerYear,
+          year
+        });
+        await newBalance.save();
+        balancesChanged = true;
+      } else if (existingBalance.total !== type.daysPerYear) {
+        // Update existing balance if limits changed
+        existingBalance.total = type.daysPerYear;
+        existingBalance.balance = existingBalance.total - existingBalance.used;
+        await existingBalance.save();
+        balancesChanged = true;
+      }
+    }
+
+    if (balancesChanged) {
+      balances = await LeaveBalance.find({
+        organisationId: orgId,
+        employeeId,
+        year
+      }).populate('leaveType', 'name code lopIfExceeded encashmentAllowed daysPerYear');
+    } else {
+      balances = await LeaveBalance.find({
+        organisationId: orgId,
+        employeeId,
+        year
+      }).populate('leaveType', 'name code lopIfExceeded encashmentAllowed daysPerYear');
+    }
 
     res.json(balances);
   } catch (err) {
