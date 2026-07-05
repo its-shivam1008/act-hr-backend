@@ -410,8 +410,14 @@ const resetPassword = async (req, res) => {
 // POST /api/auth/invite-user  (protected)
 const inviteUser = async (req, res) => {
   try {
-    const { email, role } = req.body;
+    const { email, role, createPortal } = req.body;
     const inviter = req.user;
+    const assignRole = role || "team_member";
+
+    // Validate role
+    if (!["admin", "team_member"].includes(assignRole)) {
+      return res.status(400).json({ success: false, message: "Role must be admin or team_member" });
+    }
 
     if (!["super_admin", "admin"].includes(inviter.role)) {
       return res.status(403).json({ success: false, message: "Only admins can invite users" });
@@ -431,13 +437,14 @@ const inviteUser = async (req, res) => {
       const rawToken = existingUser.generateInviteToken();
       existingUser.pendingOrgId   = inviter.organisationId;
       existingUser.pendingOrgName = inviter.organisationName;
-      existingUser.pendingRole    = role || "employee";
+      existingUser.pendingRole    = assignRole;
       existingUser.invitedBy      = inviter._id;
+      existingUser.createPortal   = !!createPortal;
       await existingUser.save({ validateBeforeSave: false });
 
       const inviteUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/#/accept-invite/${rawToken}`;
       try {
-        await sendInvitationEmail({ toEmail: email, inviteUrl, inviterName: inviter.name, organisationName: inviter.organisationName, role: role || "employee" });
+      await sendInvitationEmail({ toEmail: email, inviteUrl, inviterName: inviter.name, organisationName: inviter.organisationName, role: assignRole });
         return res.status(200).json({ success: true, message: `Invitation sent to ${email}` });
       } catch (emailErr) {
         existingUser.inviteToken = undefined; existingUser.inviteTokenExpire = undefined;
@@ -449,20 +456,21 @@ const inviteUser = async (req, res) => {
 
     const pendingUser = new User({
       email,
-      role:             role || "employee",
+      role:             assignRole,
       organisationId:   inviter.organisationId,
       organisationName: inviter.organisationName,
       inviteStatus:     "pending",
       invitedBy:        inviter._id,
-      isVerified:       true,  // invite link = verified
+      isVerified:       true,
+      createPortal:     !!createPortal,
     });
 
-    const rawToken = pendingUser.generateInviteToken();
+    const rawToken2 = pendingUser.generateInviteToken();
     await pendingUser.save({ validateBeforeSave: false });
 
-    const inviteUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/#/accept-invite/${rawToken}`;
+    const inviteUrl2 = `${process.env.FRONTEND_URL || "http://localhost:3000"}/#/accept-invite/${rawToken2}`;
     try {
-      await sendInvitationEmail({ toEmail: email, inviteUrl, inviterName: inviter.name, organisationName: inviter.organisationName, role: role || "employee" });
+      await sendInvitationEmail({ toEmail: email, inviteUrl: inviteUrl2, inviterName: inviter.name, organisationName: inviter.organisationName, role: assignRole });
       return res.status(200).json({ success: true, message: `Invitation sent to ${email}` });
     } catch (emailErr) {
       await User.findByIdAndDelete(pendingUser._id);

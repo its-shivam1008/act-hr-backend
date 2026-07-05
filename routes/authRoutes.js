@@ -9,7 +9,7 @@ const {
   getMe, getOrgMembers,
 } = require("../controllers/authController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect, combinedAuth } = require("../middleware/authMiddleware");
 
 const {
   validate,
@@ -33,8 +33,8 @@ router.get( "/accept-invite/:token", getInviteInfo);
 router.post("/accept-invite/:token", validate(acceptInviteSchema), acceptInvite);
 
 // ── Protected ─────────────────────────────────────────────────────────────
-router.get( "/me",          protect, getMe);
-router.get( "/members",     protect, getOrgMembers);
-router.post("/invite-user", protect, validate(inviteUserSchema), inviteUser);
+router.get( "/me",          protect,      getMe);
+router.get( "/members",     combinedAuth, getOrgMembers);
+router.post("/invite-user", combinedAuth, validate(inviteUserSchema), inviteUser);
 
 module.exports = router;

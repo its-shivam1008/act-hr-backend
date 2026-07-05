@@ -135,6 +135,9 @@ app.use("/api/recruitment/interviews",   require("./routes/recruitment/interview
 app.use("/api/recruitment/offers",       require("./routes/recruitment/offerRoutes"));
 app.use("/api/recruitment/onboarding",   require("./routes/recruitment/onboardingRoutes"));
 
+// ── Permission Matrix ──────────────────────────────────────────────────────
+app.use("/api/permissions", require("./routes/permissionRoutes"));
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
