@@ -40,11 +40,12 @@ const inviteUserSchema = z.object({
   email: z.string({ required_error: "Email is required" })
     .trim().toLowerCase().email("Please provide a valid email address"),
 
-  role: z.enum(["admin", "manager", "employee"], {
-    errorMap: () => ({ message: "Role must be admin, manager, or employee" }),
-  }).optional().default("employee"),
+  role: z.enum(["admin", "team_member"], {
+    errorMap: () => ({ message: "Role must be admin or team_member" }),
+  }).optional().default("team_member"),
 
   name: z.string().trim().min(2).max(60).optional(),
+  createPortal: z.boolean().optional().default(false),
 });
 
 // ── Accept Invite ─────────────────────────────────────────────────────────
