@@ -104,6 +104,9 @@ app.use("/api/statutory", require("./routes/statutory/statutoryRoutes"));
 
 // ── Leave Management ───────────────────────────────────────────────────────
 app.use("/api/leaves", require("./routes/leave/leaveRoutes"));
+app.use("/api/employee/leave-encashment", require("./routes/leave/employeeLeaveEncashmentRoutes"));
+app.use("/api/admin/leave-encashment", require("./routes/leave/adminLeaveEncashmentRoutes"));
+app.use("/api/employee/leave-balance", require("./middleware/authMiddleware").combinedAuth, require("./controllers/leave/leaveBalanceController").getBalances);
 
 // ── Performance Management ─────────────────────────────────────────────────
 app.use("/api/performance", require("./routes/performanceRoutes"));
@@ -152,6 +155,8 @@ app.use("/api/bonus", require("./routes/bonus/bonusRoutes"));
 
 // ── Custom Settings CRUD ──────────────────────────────────────────────────
 app.use("/api/settings", require("./routes/settings/customSettingRoutes"));
+app.use("/api/roles", require("./routes/settings/roleRoutes"));
+app.use("/api/security", require("./routes/settings/securityRoutes"));
 // ── Recruitment Module ─────────────────────────────────────────────────────
 app.use("/api/recruitment/requisitions", require("./routes/recruitment/requisitionRoutes"));
 app.use("/api/recruitment/candidates",   require("./routes/recruitment/candidateRoutes"));
