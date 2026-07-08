@@ -7,6 +7,7 @@ const PayrollLockSchema = new Schema(
     month:          { type: Number, required: true },
     year:           { type: Number, required: true },
     locked:         { type: Boolean, default: false },
+    locationIds:    { type: [String], default: [] },   // empty = global lock
     lockedBy:       { type: Schema.Types.ObjectId, ref: "User", default: null },
     lockedAt:       { type: Date, default: null },
     unlockedBy:     { type: Schema.Types.ObjectId, ref: "User", default: null },

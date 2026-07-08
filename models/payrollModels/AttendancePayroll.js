@@ -8,6 +8,7 @@ const AttendancePayrollSchema = new Schema(
     employeeName:   { type: String, default: "" },
     employeeCode:   { type: String, default: "" },
     department:     { type: String, default: "" },
+    personType:     { type: String, enum: ["Employee", "Labour"], default: "Employee" },
 
     month:          { type: Number, required: true },  // 1-12
     year:           { type: Number, required: true },

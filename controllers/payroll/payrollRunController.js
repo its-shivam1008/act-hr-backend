@@ -6,16 +6,30 @@ const Arrear = require("../../models/payrollModels/Arrear");
 const PayrollLock = require("../../models/payrollModels/PayrollLock");
 const SalaryStructure = require("../../models/payrollModels/SalaryStructure");
 const Employee = require("../../models/Employee");
+const Labour = require("../../models/Labour");
 const VariablePay = require("../../models/payrollModels/VariablePay");
 
 // ── GET payroll runs ──────────────────────────────────────────────────────────
 exports.getPayrollRuns = async (req, res) => {
   try {
     const orgId = req.user.organisationId;
+    const { month, year, status, personType, page, limit } = req.query;
     const filter = { organisationId: orgId };
-    if (req.query.month) filter.month = Number(req.query.month);
-    if (req.query.year)  filter.year  = Number(req.query.year);
-    if (req.query.status && req.query.status !== "All") filter.status = req.query.status;
+    if (month) filter.month = Number(month);
+    if (year)  filter.year  = Number(year);
+    if (status && status !== "All") filter.status = status;
+    if (personType) filter.personType = personType;
+
+    if (page && limit) {
+      const p = Number(page) || 1;
+      const l = Number(limit) || 20;
+      const total = await PayrollRun.countDocuments(filter);
+      const runs = await PayrollRun.find(filter)
+        .sort({ employeeName: 1 })
+        .skip((p - 1) * l)
+        .limit(l);
+      return res.json({ success: true, total, page: p, limit: l, data: runs });
+    }
 
     const runs = await PayrollRun.find(filter).sort({ employeeName: 1 });
     res.json({ success: true, data: runs });
@@ -131,7 +145,7 @@ exports.deletePayrollRun = async (req, res) => {
 exports.processPayroll = async (req, res) => {
   try {
     const orgId = req.user.organisationId;
-    const { month, year, salaryStructureId } = req.body;
+    const { month, year, salaryStructureId, personType } = req.body;
     if (!month || !year) return res.status(422).json({ success: false, message: "month and year required" });
 
     const m = Number(month), y = Number(year);
@@ -141,7 +155,9 @@ exports.processPayroll = async (req, res) => {
     if (lock?.locked) return res.status(423).json({ success: false, message: "Payroll is locked for this period" });
 
     // Load all attendance records
-    const attendances = await AttendancePayroll.find({ organisationId: orgId, month: m, year: y });
+    const attFilter = { organisationId: orgId, month: m, year: y };
+    if (personType) attFilter.personType = personType;
+    const attendances = await AttendancePayroll.find(attFilter);
     if (!attendances.length) {
       return res.status(422).json({ success: false, message: "No attendance records found. Please sync attendance first." });
     }
@@ -152,25 +168,33 @@ exports.processPayroll = async (req, res) => {
       try {
         const empId = att.employeeId;
 
-        // Load employee
-        const employee = await Employee.findOne({ _id: empId, organisationId: orgId });
-        if (!employee) {
-          errors.push({ employee: att.employeeName, error: "Employee record not found" });
+        // Load employee or labour
+        let person = await Employee.findOne({ _id: empId, organisationId: orgId });
+        let isLabour = false;
+        if (!person) {
+          person = await Labour.findOne({ _id: empId, organisationId: orgId });
+          isLabour = true;
+        }
+
+        if (!person) {
+          errors.push({ employee: att.employeeName, error: "Record not found in Master (Employee/Labour)" });
           continue;
         }
 
         // Auto-detect or fetch salary structure
         let structure = null;
-        if (salaryStructureId) {
-          structure = await SalaryStructure.findOne({ _id: salaryStructureId, organisationId: orgId });
-        } else if (employee.employment?.gradeName) {
-          structure = await SalaryStructure.findOne({
-            organisationId: orgId,
-            $or: [
-              { code: employee.employment.gradeName },
-              { name: employee.employment.gradeName }
-            ]
-          });
+        if (!isLabour) {
+          if (salaryStructureId) {
+            structure = await SalaryStructure.findOne({ _id: salaryStructureId, organisationId: orgId });
+          } else if (person.employment?.gradeName) {
+            structure = await SalaryStructure.findOne({
+              organisationId: orgId,
+              $or: [
+                { code: person.employment.gradeName },
+                { name: person.employment.gradeName }
+              ]
+            });
+          }
         }
 
         // Component Base Values
@@ -181,8 +205,15 @@ exports.processPayroll = async (req, res) => {
         let compConveyance = 0;
         let compSpecial = 0;
 
-        if (structure) {
-          const monthlyCTC = (employee.financial?.ctc || structure.ctc || 0) / 12 || (employee.financial?.basicSalary || 0) * 2 || 0;
+        if (isLabour) {
+          compBasic = person.financial?.basicPay || person.financial?.monthlyRate || ((person.financial?.ratePerDay || 0) * 26) || 0;
+          compHra = person.financial?.hra || 0;
+          compDa = person.financial?.da || 0;
+          compConveyance = person.financial?.convenienceAllowance || 0;
+          compMedical = person.financial?.medical || 0;
+          compSpecial = person.financial?.siteAllowance || person.financial?.foodAllowance || 0;
+        } else if (structure) {
+          const monthlyCTC = (person.financial?.ctc || structure.ctc || 0) / 12 || (person.financial?.basicSalary || 0) * 2 || 0;
 
           const evalComp = (comp) => {
             if (!comp) return 0;
@@ -219,18 +250,18 @@ exports.processPayroll = async (req, res) => {
             compSpecial = Math.max(0, monthlyCTC - sumOthers);
           }
         } else {
-          compBasic = employee.financial?.basicSalary || 0;
-          compHra = employee.financial?.hra || 0;
-          compDa = employee.financial?.da || 0;
-          compMedical = employee.financial?.medicalAllowance || 0;
-          compConveyance = employee.financial?.conveyanceAllowance || 0;
+          compBasic = person.financial?.basicSalary || 0;
+          compHra = person.financial?.hra || 0;
+          compDa = person.financial?.da || 0;
+          compMedical = person.financial?.medicalAllowance || 0;
+          compConveyance = person.financial?.conveyanceAllowance || 0;
           const totalFixed = compBasic + compHra + compDa + compMedical + compConveyance;
-          compSpecial = Math.max(0, (employee.financial?.ctc || totalFixed) - totalFixed);
+          compSpecial = Math.max(0, (person.financial?.ctc || totalFixed) - totalFixed);
         }
 
         // Check if mid-month joiner / resigner
-        const joinDate = employee.employment?.dateOfJoining ? new Date(employee.employment.dateOfJoining) : null;
-        const leaveDate = employee.employment?.dateOfLeaving ? new Date(employee.employment.dateOfLeaving) : null;
+        const joinDate = person.employment?.dateOfJoining ? new Date(person.employment.dateOfJoining) : null;
+        const leaveDate = person.employment?.dateOfLeaving ? new Date(person.employment.dateOfLeaving) : null;
 
         let isMidMonthJoiner = false;
         let isMidMonthResigner = false;
@@ -305,6 +336,7 @@ exports.processPayroll = async (req, res) => {
           employeeName: att.employeeName,
           employeeCode: att.employeeCode,
           department: att.department,
+          personType: att.personType || (isLabour ? "Labour" : "Employee"),
           month: m, year: y,
           salaryStructureId: structure?._id || null,
           basic: Math.round(basic), hra: Math.round(hra), da: Math.round(da),
@@ -348,7 +380,7 @@ exports.processPayroll = async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: `Payroll processed for ${processed} employees`, errors });
+    res.json({ success: true, message: `Payroll processed for ${processed} records`, errors });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

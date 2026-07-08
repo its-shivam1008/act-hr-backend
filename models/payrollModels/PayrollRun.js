@@ -15,6 +15,7 @@ const PayrollRunSchema = new Schema(
     employeeCode:     { type: String, default: "" },
     department:       { type: String, default: "" },
     designation:      { type: String, default: "" },
+    personType:       { type: String, enum: ["Employee", "Labour"], default: "Employee" },
 
     month:            { type: Number, required: true },
     year:             { type: Number, required: true },
