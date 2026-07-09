@@ -237,10 +237,13 @@ const nestedToFlat = (doc) => {
 // ── GET /api/employees ────────────────────────────────────────────────────────
 const getEmployees = async (req, res) => {
   try {
-    const { search, status, page = 1, limit = 20 } = req.query;
+    const { search, status, department, page = 1, limit = 20 } = req.query;
     const orgId = req.user.organisationId;
     const query = { organisationId: orgId };
     if (status && status !== "All") query["employment.status"] = status;
+    if (department && department !== "All Departments") {
+      query["employment.departmentName"] = new RegExp(department, "i");
+    }
     if (search) {
       const s = new RegExp(search, "i");
       query.$or = [
