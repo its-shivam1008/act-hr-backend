@@ -387,4 +387,162 @@ const updateFormConfig = async (req, res) => {
   }
 };
 
-module.exports = { getLabours, getLabour, createLabour, updateLabour, deleteLabour, getFormConfig, updateFormConfig };
+// ── POST /api/labours/bulk-import ────────────────────────────────────────────
+// Body: { rows: [ flatLabour, … ] }  (parsed from XLSX on the frontend)
+const bulkImportLabours = async (req, res) => {
+  try {
+    const orgId = req.user.organisationId;
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0)
+      return res.status(422).json({ success: false, message: "No rows provided" });
+
+    const inserted = [];
+    const failed   = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        const r = { ...row };
+
+        // Normalize some names to names-keys if they exist as different labels
+        if (r.location && !r.locationName) r.locationName = r.location;
+        if (r.employmentType && !r.employmentTypeName) r.employmentTypeName = r.employmentType;
+        if (r.agency && !r.agencyName) r.agencyName = r.agency;
+        if (r.department && !r.departmentName) r.departmentName = r.department;
+        if (r.designation && !r.designationName) r.designationName = r.designation;
+
+        const queryOptions = (name) => ({
+          organisationId: orgId,
+          name: { $regex: new RegExp(`^${name.trim()}$`, "i") }
+        });
+
+        // 1. Location
+        if (r.locationName && !mongoose.Types.ObjectId.isValid(String(r.locationId))) {
+          const doc = await Location.findOne(queryOptions(r.locationName)).lean();
+          if (doc) {
+            r.locationId = doc._id;
+            r.locationName = doc.name;
+          }
+        }
+
+        // 2. Employment Type
+        if (r.employmentTypeName && !mongoose.Types.ObjectId.isValid(String(r.employmentType))) {
+          const doc = await EmploymentType.findOne(queryOptions(r.employmentTypeName)).lean();
+          if (doc) {
+            r.employmentType = doc._id;
+            r.employmentTypeName = doc.name;
+          }
+        }
+
+        // 3. Agency
+        if (r.agencyName && !mongoose.Types.ObjectId.isValid(String(r.agencyId))) {
+          const doc = await Agency.findOne({
+            organisationId: orgId,
+            agencyName: { $regex: new RegExp(`^${r.agencyName.trim()}$`, "i") }
+          }).lean();
+          if (doc) {
+            r.agencyId = doc._id;
+            r.agencyName = doc.agencyName;
+          }
+        }
+
+        // 4. Department
+        if (r.departmentName && !mongoose.Types.ObjectId.isValid(String(r.department))) {
+          const doc = await Department.findOne(queryOptions(r.departmentName)).lean();
+          if (doc) {
+            r.department = doc._id;
+            r.departmentName = doc.name;
+          }
+        }
+
+        // 5. Designation
+        if (r.designationName && !mongoose.Types.ObjectId.isValid(String(r.designation))) {
+          const doc = await Designation.findOne(queryOptions(r.designationName)).lean();
+          if (doc) {
+            r.designation = doc._id;
+            r.designationName = doc.name;
+          }
+        }
+
+        // 6. Compliance Zone
+        const compZoneVal = r.complianceZoneName || r.complianceZone;
+        if (compZoneVal && !mongoose.Types.ObjectId.isValid(String(r.complianceZone))) {
+          const doc = await ComplianceZone.findOne(queryOptions(compZoneVal)).lean();
+          if (doc) {
+            r.complianceZone = doc._id;
+            r.complianceZoneName = doc.name;
+          }
+        }
+
+        const parseSkillLevel = (str) => {
+          if (!str) return null;
+          const match = str.match(/^(.+?)\s*\(\s*[Ll]evel\s*(\d+)\s*\)/);
+          if (match) {
+            return {
+              name: match[1].trim(),
+              levelNumber: parseInt(match[2], 10)
+            };
+          }
+          return { name: str.trim(), levelNumber: null };
+        };
+
+        // 7. Compliance Skill Level (maps to SkillLevel model)
+        const compSkillVal = r.complianceSkillLevelName || r.complianceSkillLevel;
+        if (compSkillVal && !mongoose.Types.ObjectId.isValid(String(r.complianceSkillLevel))) {
+          const parsed = parseSkillLevel(compSkillVal);
+          if (parsed) {
+            const query = {
+              organisationId: orgId,
+              name: { $regex: new RegExp(`^${parsed.name}$`, "i") }
+            };
+            if (parsed.levelNumber !== null) query.levelNumber = parsed.levelNumber;
+            const doc = await SkillLevel.findOne(query).lean();
+            if (doc) {
+              r.complianceSkillLevel = doc._id;
+              r.complianceSkillLevelName = doc.name;
+            }
+          }
+        }
+
+        // 8. Skill Level (maps to SkillLevel model)
+        const skillLvlVal = r.skillLevelName || r.skillLevel;
+        if (skillLvlVal && !mongoose.Types.ObjectId.isValid(String(r.skillLevel))) {
+          const parsed = parseSkillLevel(skillLvlVal);
+          if (parsed) {
+            const query = {
+              organisationId: orgId,
+              name: { $regex: new RegExp(`^${parsed.name}$`, "i") }
+            };
+            if (parsed.levelNumber !== null) query.levelNumber = parsed.levelNumber;
+            const doc = await SkillLevel.findOne(query).lean();
+            if (doc) {
+              r.skillLevel = doc._id;
+              r.skillLevelName = doc.name;
+            }
+          }
+        }
+
+        if (!r.firstName) throw new Error("firstName is required");
+        const names  = await resolveNames(r);
+        const nested = flatToNested(r, names);
+        const labour = await Labour.create({ ...nested, organisationId: orgId, createdBy: req.user._id });
+        inserted.push(nestedToFlat(labour));
+      } catch (err) {
+        failed.push({ row: i + 1, data: row, error: err.message });
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      inserted: inserted.length,
+      failed: failed.length,
+      errors: failed,
+      message: `${inserted.length} labour record(s) imported. ${failed.length} failed.`,
+    });
+  } catch (err) {
+    console.error("[BulkImportLabours]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getLabours, getLabour, createLabour, updateLabour, deleteLabour, getFormConfig, updateFormConfig, bulkImportLabours };

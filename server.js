@@ -71,6 +71,8 @@ app.use("/api/contractor-billing", require("./routes/contractor/invoiceRoutes"))
 
 // ── Attendance Capture & Muster Roll ───────────────────────────────────────
 app.use("/api/attendance", require("./routes/attendance/attendanceRoutes"));
+app.use("/api/attendance/shifts", require("./routes/attendance/shiftRoutes"));
+app.use("/api/attendance/rosters", require("./routes/attendance/rosterRoutes"));
 app.use("/api/regularizations", require("./routes/attendance/regularizationRoutes"));
 
 // ── Gate Pass Management ───────────────────────────────────────────────────
@@ -102,6 +104,9 @@ app.use("/api/statutory", require("./routes/statutory/statutoryRoutes"));
 
 // ── Leave Management ───────────────────────────────────────────────────────
 app.use("/api/leaves", require("./routes/leave/leaveRoutes"));
+app.use("/api/employee/leave-encashment", require("./routes/leave/employeeLeaveEncashmentRoutes"));
+app.use("/api/admin/leave-encashment", require("./routes/leave/adminLeaveEncashmentRoutes"));
+app.use("/api/employee/leave-balance", require("./middleware/authMiddleware").combinedAuth, require("./controllers/leave/leaveBalanceController").getBalances);
 
 // ── Performance Management ─────────────────────────────────────────────────
 app.use("/api/performance", require("./routes/performanceRoutes"));
@@ -118,12 +123,41 @@ app.use("/api/payroll/loans", require("./routes/payroll/loanRoutes"));
 // ── Payroll Adjustments ────────────────────────────────────────────────────
 app.use("/api/payroll/adjustments", require("./routes/payroll/adjustmentRoutes"));
 
+// ── Internal Wages ─────────────────────────────────────────────────────────
+app.use("/api/internal-wages", require("./routes/payroll/internalWageRoutes"));
+
+// ── Salary Structure ───────────────────────────────────────────────────────
+app.use("/api/payroll/salary-structure", require("./routes/payroll/salaryStructureRoutes"));
+
+// ── Attendance Payroll ─────────────────────────────────────────────────────
+app.use("/api/payroll/attendance", require("./routes/payroll/attendancePayrollRoutes"));
+
+// ── Overtime ───────────────────────────────────────────────────────────────
+app.use("/api/payroll/overtime", require("./routes/payroll/overtimeRoutes"));
+
+// ── Payroll Processing (Runs) ──────────────────────────────────────────────
+app.use("/api/payroll/runs", require("./routes/payroll/payrollRunRoutes"));
+
+// ── Arrears & Retro ────────────────────────────────────────────────────────
+app.use("/api/payroll/arrears", require("./routes/payroll/arrearRoutes"));
+
+// ── Payroll Lock ───────────────────────────────────────────────────────────
+app.use("/api/payroll/lock", require("./routes/payroll/payrollLockRoutes"));
+
+// ── Payslips ───────────────────────────────────────────────────────────────
+app.use("/api/payroll/payslips", require("./routes/payroll/payslipRoutes"));
+
+// ── Variable Pay & Incentives ──────────────────────────────────────────────
+app.use("/api/payroll/variable-pay", require("./routes/payroll/variablePayRoutes"));
+
 // ── Bonus & Incentives ─────────────────────────────────────────────────────
 app.use("/api/bonus", require("./routes/bonus/bonusRoutes"));
 
 // ── Custom Settings CRUD ──────────────────────────────────────────────────
 app.use("/api/settings", require("./routes/settings/customSettingRoutes"));
 
+app.use("/api/roles", require("./routes/settings/roleRoutes"));
+app.use("/api/security", require("./routes/settings/securityRoutes"));
 // ── Recruitment Module ─────────────────────────────────────────────────────
 app.use(
   "/api/recruitment/requisitions",
@@ -145,6 +179,9 @@ app.use(
   "/api/recruitment/onboarding",
   require("./routes/recruitment/onboardingRoutes")
 );
+
+// ── Permission Matrix ──────────────────────────────────────────────────────
+app.use("/api/permissions", require("./routes/permissionRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Server Running");

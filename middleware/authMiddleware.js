@@ -67,3 +67,28 @@ exports.employeeProtect = async (req, res, next) => {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 };
+
+// Combined middleware for routes accessible by both Admins and Employees
+exports.combinedAuth = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer "))
+    return res.status(401).json({ success: false, message: "Not authorized" });
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type === "employee") {
+      const emp = await Employee.findById(decoded.id);
+      if (!emp) return res.status(401).json({ success: false, message: "Employee not found" });
+      req.user = emp; // Alias as req.user for shared controllers
+      next();
+    } else {
+      const user = await User.findById(decoded.id);
+      if (!user || !user.isActive) return res.status(401).json({ success: false, message: "User not found or inactive" });
+      req.user = user;
+      next();
+    }
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid token" });
+  }
+};

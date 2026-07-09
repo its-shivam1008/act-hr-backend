@@ -8,13 +8,21 @@ const AdjustmentSchema = new Schema(
       type: String,
       required: true,
     },
+    personType: {
+      type: String,
+      enum: ["Employee", "Labour"],
+      default: "Employee",
+      index: true,
+    },
     employee: {
       type: OID,
       ref: "Employee",
       required: true,
     },
     employeeName: { type: String },
-    employeeId:   { type: String },
+    employeeId: { type: String },
+    locationId: { type: OID, ref: "Location", default: null, index: true },
+    locationName: { type: String, default: "" },
     adjustmentType: {
       type: String, // Addition, Deduction
       required: true,
@@ -56,7 +64,28 @@ const AdjustmentSchema = new Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
+
+AdjustmentSchema.index({
+  organisationId: 1,
+  isRecurring: 1,
+  status: 1,
+  createdAt: -1,
+});
+AdjustmentSchema.index({
+  organisationId: 1,
+  locationId: 1,
+  isRecurring: 1,
+  status: 1,
+  createdAt: -1,
+});
+AdjustmentSchema.index({
+  employeeName: "text",
+  employeeId: "text",
+  componentName: "text",
+  componentCode: "text",
+  reason: "text",
+});
 
 module.exports = mongoose.model("Adjustment", AdjustmentSchema);

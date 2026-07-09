@@ -27,7 +27,7 @@ const UserSchema = new mongoose.Schema(
     // ── Role ───────────────────────────────────────────────────────────────
     role: {
       type: String,
-      enum: ["super_admin", "admin", "manager", "employee"],
+      enum: ["super_admin", "admin", "team_member"],
       default: "super_admin",
     },
 
@@ -66,6 +66,7 @@ const UserSchema = new mongoose.Schema(
 
     // ── Misc ───────────────────────────────────────────────────────────────
     isActive:           { type: Boolean, default: true },
+    createPortal:       { type: Boolean, default: false },
     lastLogin:          Date,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
@@ -116,6 +117,7 @@ UserSchema.methods.toSafeObject = function () {
     organisationName: this.organisationName,
     inviteStatus:     this.inviteStatus,
     isActive:         this.isActive,
+    createPortal:     this.createPortal,
     lastLogin:        this.lastLogin,
     createdAt:        this.createdAt,
   };
