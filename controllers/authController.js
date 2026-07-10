@@ -1,6 +1,7 @@
 const User                = require("../models/User");
 const Employee            = require("../models/Employee");
 const PendingRegistration = require("../models/PendingRegistration");
+const Permission          = require("../models/Permission");
 const jwt     = require("jsonwebtoken");
 const crypto  = require("crypto");
 const bcrypt  = require("bcryptjs");
@@ -233,11 +234,25 @@ const login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
+    // Fetch user permissions
+    const permRecord = await Permission.findOne({ userId: user._id, organisationId: user.organisationId });
+    const userPermissions = {};
+    if (permRecord && permRecord.permissions) {
+      permRecord.permissions.forEach((val, key) => {
+        userPermissions[key] = {
+          read: !!val.read,
+          create: !!val.create,
+          update: !!val.update,
+          delete: !!val.delete,
+        };
+      });
+    }
+
     return res.status(200).json({
       success:  true,
       message:  "Login successful",
       token:    generateToken(user._id),
-      user:     user.toSafeObject(),
+      user:     { ...user.toSafeObject(), permissions: userPermissions },
     });
   } catch (error) {
     console.error("[Login]", error.message);
@@ -572,7 +587,22 @@ const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    return res.status(200).json({ success: true, user: user.toSafeObject() });
+
+    // Fetch user permissions
+    const permRecord = await Permission.findOne({ userId: user._id, organisationId: user.organisationId });
+    const userPermissions = {};
+    if (permRecord && permRecord.permissions) {
+      permRecord.permissions.forEach((val, key) => {
+        userPermissions[key] = {
+          read: !!val.read,
+          create: !!val.create,
+          update: !!val.update,
+          delete: !!val.delete,
+        };
+      });
+    }
+
+    return res.status(200).json({ success: true, user: { ...user.toSafeObject(), permissions: userPermissions } });
   } catch (error) {
     console.error("[GetMe]", error.message);
     return res.status(500).json({ success: false, message: error.message });
