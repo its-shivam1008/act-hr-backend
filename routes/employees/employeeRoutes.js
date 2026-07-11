@@ -1,6 +1,7 @@
 const express  = require("express");
 const router   = express.Router();
 const { protect } = require("../../middleware/authMiddleware");
+const { canRead, canCreate, canUpdate, canDelete } = require("../../middleware/rbacMiddleware");
 
 const {
   getEmployees, getEmployee,
@@ -15,10 +16,10 @@ router.put ("/form-config",   protect, saveFormConfig);
 router.get ("/hierarchy",     protect, getHierarchy);
 router.post("/bulk-import",   protect, bulkImportEmployees);
 
-router.get ("/",     protect, getEmployees);
-router.post("/",     protect, createEmployee);
-router.get ("/:id",  protect, getEmployee);
-router.put ("/:id",  protect, updateEmployee);
-router.delete("/:id", protect, deleteEmployee);
+router.get ("/",     protect, canRead("emp_master"), getEmployees);
+router.post("/",     protect, canCreate("emp_master"), createEmployee);
+router.get ("/:id",  protect, canRead("emp_master"), getEmployee);
+router.put ("/:id",  protect, canUpdate("emp_master"), updateEmployee);
+router.delete("/:id", protect, canDelete("emp_master"), deleteEmployee);
 
 module.exports = router;

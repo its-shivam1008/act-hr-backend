@@ -60,6 +60,8 @@ exports.saveUserPermissions = async (req, res) => {
     const { organisationId, role: callerRole } = req.user;
     const { permissions } = req.body;
 
+    console.log('[saveUserPermissions] callerRole:', callerRole, '| userId:', req.user._id);
+
     if (!["super_admin", "admin"].includes(callerRole)) {
       return res.status(403).json({ success: false, message: "Only admins can modify permissions" });
     }
