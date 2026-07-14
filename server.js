@@ -155,14 +155,30 @@ app.use("/api/bonus", require("./routes/bonus/bonusRoutes"));
 
 // ── Custom Settings CRUD ──────────────────────────────────────────────────
 app.use("/api/settings", require("./routes/settings/customSettingRoutes"));
+
 app.use("/api/roles", require("./routes/settings/roleRoutes"));
 app.use("/api/security", require("./routes/settings/securityRoutes"));
 // ── Recruitment Module ─────────────────────────────────────────────────────
-app.use("/api/recruitment/requisitions", require("./routes/recruitment/requisitionRoutes"));
-app.use("/api/recruitment/candidates",   require("./routes/recruitment/candidateRoutes"));
-app.use("/api/recruitment/interviews",   require("./routes/recruitment/interviewRoutes"));
-app.use("/api/recruitment/offers",       require("./routes/recruitment/offerRoutes"));
-app.use("/api/recruitment/onboarding",   require("./routes/recruitment/onboardingRoutes"));
+app.use(
+  "/api/recruitment/requisitions",
+  require("./routes/recruitment/requisitionRoutes")
+);
+app.use(
+  "/api/recruitment/candidates",
+  require("./routes/recruitment/candidateRoutes")
+);
+app.use(
+  "/api/recruitment/interviews",
+  require("./routes/recruitment/interviewRoutes")
+);
+app.use(
+  "/api/recruitment/offers",
+  require("./routes/recruitment/offerRoutes")
+);
+app.use(
+  "/api/recruitment/onboarding",
+  require("./routes/recruitment/onboardingRoutes")
+);
 
 // ── Permission Matrix ──────────────────────────────────────────────────────
 app.use("/api/permissions", require("./routes/permissionRoutes"));
